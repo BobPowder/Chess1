@@ -68,13 +68,13 @@
 				<div id="logs"></div>
 				<div onclick="show('none')" id="wrap"></div>
 				<div id="window">
-					<div class="transformer" figuretype="rook">		
+					<div class="transformer" figuretype="Rook">		
 						<img src="BlackRook.png">
-					<div class="transformer" figuretype="bishop">		
+					<div class="transformer" figuretype="Bishop">		
 						<img src="BlackBishop.png">
-					<div class="transformer" figuretype="knight">		
+					<div class="transformer" figuretype="Knight">		
 						<img src="BlackKnight.png">
-					<div class="transformer" figuretype="queen">		
+					<div class="transformer" figuretype="Queen">		
 						<img src="BlackQueen.png">
 				</div>
 				<script type="text/javascript">
@@ -163,7 +163,7 @@
 					{
 						var rook = finddiv(king.getAttribute('column').charCodeAt(0) > destination.getAttribute('column').charCodeAt(0)? 'a' : 'h', king.getAttribute('row'));
 						if (king.getAttribute("additional") === 'not moving' &&
-							rook.attr('figuretype') === 'rook' &&
+							rook.attr('figuretype') === 'Rook' &&
 							rook.attr('colorside') === king.getAttribute('colorside') &&
 							rook.attr('additional') === 'not moving' &&
 							isanyonebetween(king, rook[0]))
@@ -180,7 +180,7 @@
 					{
 						var prey = finddiv(track.getAttribute('column'), predator.getAttribute('row'))[0];
 
-						if (prey.getAttribute('figuretype') === 'pawn' && prey.getAttribute('colorside')==opponent(predator.getAttribute('colorside'))
+						if (prey.getAttribute('figuretype') === 'Pawn' && prey.getAttribute('colorside')==opponent(predator.getAttribute('colorside'))
 							&& prey.getAttribute('additional') === 'jumped')
 						{
 							backstabmode = true;
@@ -245,17 +245,17 @@
 						if (touchedfigure.getAttribute('colorside') === destination.getAttribute('colorside')) return false;
 						switch(touchedfigure.getAttribute('figuretype'))
 						{
-							case 'knight':
+							case 'Knight':
 								return  (rowdifference(touchedfigure, destination) === 2 && columndifference(touchedfigure, destination) === 1) ||
 									(rowdifference(touchedfigure, destination) === 1 && columndifference(touchedfigure, destination) === 2);
-							case 'rook':
+							case 'Rook':
 								return (touchedfigure.getAttribute('row') === destination.getAttribute('row') ||
 										touchedfigure.getAttribute('column') === destination.getAttribute('column')) &&
 										isanyonebetween(touchedfigure, destination);
-							case 'bishop':
+							case 'Bishop':
 								return (rowdifference(touchedfigure, destination) === columndifference(touchedfigure, destination)) &&
 										isanyonebetween(touchedfigure, destination);
-							case 'pawn':
+							case 'Pawn':
 								if ((destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === 'white'? 1 : -1 )) &&
 									(touchedfigure.getAttribute('column') === destination.getAttribute('column') && (destination.getAttribute('figuretype') === 'nothing')  || 
 									(columndifference(touchedfigure, destination) === 1  && (destination.getAttribute('figuretype') != 'nothing' || readytobackstab(touchedfigure, destination)))))
@@ -271,21 +271,11 @@
 										return true;
 									}
 								return false;
-							
-								/*return ((destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === 'white'? 1 : -1 )) &&
-									(touchedfigure.getAttribute('column') === destination.getAttribute('column') && (destination.getAttribute('figuretype') === 'nothing')  || 
-									(columndifference(touchedfigure, destination) === 1  && (destination.getAttribute('figuretype') != 'nothing' || readytobackstab(touchedfigure, destination))))) ||
-									
-									(destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === 'white'? 2 : -2 ) &&
-									touchedfigure.getAttribute('column') === destination.getAttribute('column') && 
-									destination.getAttribute('figuretype') === 'nothing' && 
-									(touchedfigure.hasAttribute('additional') && touchedfigure.getAttribute('additional') === 'not moving') &&
-									isanyonebetween(touchedfigure, destination));*/
-							case 'king': 
+							case 'King': 
 								return ((rowdifference(touchedfigure, destination) === 0 || rowdifference(touchedfigure, destination) === 1) &&
 										(columndifference(touchedfigure, destination) === 0 || columndifference(touchedfigure,destination) === 1)) ||
 										(columndifference(touchedfigure, destination) === 2 && rowdifference(touchedfigure, destination) === 0 && readytoroque(touchedfigure, destination));
-							case 'queen':
+							case 'Queen':
 								return (touchedfigure.getAttribute('row') === destination.getAttribute('row') ||
 										touchedfigure.getAttribute('column') === destination.getAttribute('column') ||
 										rowdifference(touchedfigure, destination) === columndifference(touchedfigure, destination)) &&
@@ -298,10 +288,10 @@
 					function check(attackingcolor)
 					{
 						var attackers = $(".cell[colorside=" + attackingcolor + "]");
-						var defencingcolor = (attackingcolor === 'white'? 'black' : 'white');
+						var defencingcolor = opponent(attackingcolor);
 						var threat = false;
 						attackers.each(function(){
-							if (ismovecorrect(this, $(".cell[colorside=" + defencingcolor + "][figuretype='king']")[0])) 
+							if (ismovecorrect(this, $(".cell[colorside=" + defencingcolor + "][figuretype='King']")[0])) 
 							{
 								threat = true;
 								return;
@@ -324,42 +314,27 @@
 					devoured.appendChild(document.createElement("img"));
 					function isSimulatedMoveThreatening(touchedfigure, destination)
 					{
-						var attackingcolor = touchedfigure.getAttribute('colorside') === 'white'? "black" : "white";
+						var attackingcolor = opponent(touchedfigure.getAttribute('colorside'));
 						var threat = true;
 						var didntmove = (touchedfigure.hasAttribute('additional') && 
 											(touchedfigure.getAttribute("additional") ==='not moving' ||
 											touchedfigure.getAttribute("additional") ==='checked') ? true : false);
 						if (destination.getAttribute('figuretype')!='nothing')
 						{
-							devoured.setAttribute('colorside', destination.getAttribute('colorside'));
-							devoured.setAttribute('figuretype', destination.getAttribute('figuretype'));
-							devoured.setAttribute('row', destination.getAttribute('row'));
-							devoured.setAttribute('column', destination.getAttribute('column'));
-							if (destination.hasAttribute("additional")) devoured.setAttribute('additional', destination.getAttribute('additional'));
-							devoured.getElementsByTagName("img")[0].src=destination.getElementsByTagName("img")[0].src;
+							copyCellInfo(destination, devoured);
 							move2(touchedfigure, destination);
 							if (!check(attackingcolor)) 
 							{
 								threat=false;			
 							}
 							move2(destination, touchedfigure);
-							destination.setAttribute('colorside', devoured.getAttribute('colorside'));
-							destination.setAttribute('figuretype', devoured.getAttribute('figuretype'));
-							destination.setAttribute('row', devoured.getAttribute('row'));
-							destination.setAttribute('column', devoured.getAttribute('column'));
-							if (devoured.hasAttribute("additional")) destination.setAttribute('additional', devoured.getAttribute('additional'));
 							destination.appendChild(document.createElement("img"));
-							destination.getElementsByTagName("img")[0].src=devoured.getElementsByTagName("img")[0].src;
+							copyCellInfo(devoured, destination);
 						}
 						else if (backstabmode) // взятие на проходе
 						{
 							var prey = finddiv(destination.getAttribute('column'), touchedfigure.getAttribute('row'))[0];
-							devoured.setAttribute('colorside', prey.getAttribute('colorside'));
-							devoured.setAttribute('figuretype', prey.getAttribute('figuretype'));
-							devoured.setAttribute('row', prey.getAttribute('row'));
-							devoured.setAttribute('column', prey.getAttribute('column'));
-							if (prey.hasAttribute("additional")) devoured.setAttribute('additional', prey.getAttribute('additional'));
-							devoured.getElementsByTagName("img")[0].src=prey.getElementsByTagName("img")[0].src;
+							copyCellInfo(prey, devoured);
 							move2(touchedfigure, destination);
 							prey.setAttribute('colorside', 'nothing');
 							prey.setAttribute('figuretype', 'nothing');
@@ -370,13 +345,9 @@
 								threat=false;			
 							}
 							move2(destination, touchedfigure);
-							prey.setAttribute('colorside', devoured.getAttribute('colorside'));
-							prey.setAttribute('figuretype', devoured.getAttribute('figuretype'));
-							prey.setAttribute('row', devoured.getAttribute('row'));
-							prey.setAttribute('column', devoured.getAttribute('column'));
-							if (devoured.hasAttribute("additional")) prey.setAttribute('additional', devoured.getAttribute('additional'));
 							prey.appendChild(document.createElement("img"));
-							prey.getElementsByTagName("img")[0].src=devoured.getElementsByTagName("img")[0].src;
+							prey.setAttribute('colorside', devoured.getAttribute('colorside'));
+							copyCellInfo(devoured, prey);
 						}
 						else
 						{	
@@ -395,7 +366,7 @@
 					function checkmate(defencingcolor)
 					{
 						var defenders = $(".cell[colorside=" + defencingcolor + "]");
-						var attackingcolor = (defencingcolor === 'white'? 'black' : 'white');
+						var attackingcolor = (opponent(defencingcolor));
 						var threat = true;
 						var defender;				
 						defenders.each(function(){
@@ -419,7 +390,7 @@
 					
 					function showpromotewindow(state)
 					{
-						if ( $(".cell[row='8'][figuretype='pawn']").length || $(".cell[row='1'][figuretype='pawn']").length)
+						if ( $(".cell[row='8'][figuretype='Pawn']").length || $(".cell[row='1'][figuretype='Pawn']").length)
 						{
 							addToLogNewLine('TRANSFORM!');
 							document.getElementById('window').style.display = state;            
@@ -434,18 +405,18 @@
 					touchedfigure.appendChild(document.createElement("img"));
 					
 					
-					insertimage('#dedede', "BlackRook.png", "rook", "black", "a", 8, 'not moving');
-					insertimage('#bababa', "BlackKnight.png", "knight", "black", "b", 8, 'nothing');
-					insertimage('#dedede', "BlackBishop.png", "bishop", "black", "c", 8, 'nothing');
-					insertimage('#bababa', "BlackQueen.png", "queen", "black", "d", 8, 'nothing');
-					insertimage('#dedede', "BlackKing.png", "king", "black", "e", 8, 'not moving');
-					insertimage('#bababa', "BlackBishop.png", "bishop", "black", "f", 8, 'nothing');
-					insertimage('#dedede', "BlackKnight.png", "knight", "black", "g", 8, 'nothing');
-					insertimage('#bababa', "BlackRook.png", "rook", "black", "h", 8, 'not moving');
+					insertimage('#dedede', "BlackRook.png", "Rook", "black", "a", 8, 'not moving');
+					insertimage('#bababa', "BlackKnight.png", "Knight", "black", "b", 8, 'nothing');
+					insertimage('#dedede', "BlackBishop.png", "Bishop", "black", "c", 8, 'nothing');
+					insertimage('#bababa', "BlackQueen.png", "Queen", "black", "d", 8, 'nothing');
+					insertimage('#dedede', "BlackKing.png", "King", "black", "e", 8, 'not moving');
+					insertimage('#bababa', "BlackBishop.png", "Bishop", "black", "f", 8, 'nothing');
+					insertimage('#dedede', "BlackKnight.png", "Knight", "black", "g", 8, 'nothing');
+					insertimage('#bababa', "BlackRook.png", "Rook", "black", "h", 8, 'not moving');
 					
 					for (var i=8; i<16; i++)
 						insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
-						"BlackPawn.png", "pawn", "black", String.fromCharCode(89+i), 7, 'not moving');
+						"BlackPawn.png", "Pawn", "black", String.fromCharCode(89+i), 7, 'not moving');
 									
 					for (var i=16; i<48; i++)
 						insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
@@ -453,30 +424,30 @@
 					
 					for (var i=48; i<56; i++)
 						insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'),
-						"WhitePawn.png", "pawn", "white", String.fromCharCode(49+i), 2, 'not moving');
+						"WhitePawn.png", "Pawn", "white", String.fromCharCode(49+i), 2, 'not moving');
 									
-					insertimage("#bababa", "WhiteRook.png", "rook", "white", "a", 1, 'not moving');
-					insertimage('#dedede', "WhiteKnight.png", "knight", "white", "b", 1, 'nothing');
-					insertimage("#bababa", "WhiteBishop.png", "bishop", "white", "c", 1, 'nothing');
-					insertimage('#dedede', "WhiteQueen.png", "queen", "white", "d", 1, 'nothing');
-					insertimage("#bababa", "WhiteKing.png", "king", "white", "e", 1, 'not moving');
-					insertimage('#dedede', "WhiteBishop.png", "bishop", "white", "f", 1, 'nothing');
-					insertimage("#bababa", "WhiteKnight.png", "knight", "white", "g", 1, 'nothing');
-					insertimage('#dedede', "WhiteRook.png", "rook", "white", "h", 1, 'not moving');
+					insertimage("#bababa", "WhiteRook.png", "Rook", "white", "a", 1, 'not moving');
+					insertimage('#dedede', "WhiteKnight.png", "Knight", "white", "b", 1, 'nothing');
+					insertimage("#bababa", "WhiteBishop.png", "Bishop", "white", "c", 1, 'nothing');
+					insertimage('#dedede', "WhiteQueen.png", "Queen", "white", "d", 1, 'nothing');
+					insertimage("#bababa", "WhiteKing.png", "King", "white", "e", 1, 'not moving');
+					insertimage('#dedede', "WhiteBishop.png", "Bishop", "white", "f", 1, 'nothing');
+					insertimage("#bababa", "WhiteKnight.png", "Knight", "white", "g", 1, 'nothing');
+					insertimage('#dedede', "WhiteRook.png", "Rook", "white", "h", 1, 'not moving');
 					
 					/*for (var i=0; i<3; i++)
 						insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
 						null , "nothing", "nothing", String.fromCharCode(97+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');
 						
-					insertimage('#bababa', "BlackKing.png", "king", "black", "d", 8, 'not moving');
+					insertimage('#bababa', "BlackKing.png", "King", "black", "d", 8, 'not moving');
 					for (var i=4; i<18; i++)
 						insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
 						null , "nothing", "nothing", String.fromCharCode(97+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');
-					insertimage("#dedede", "WhiteKing.png", "king", "white", "c", 6, 'not moving');
+					insertimage("#dedede", "WhiteKing.png", "King", "white", "c", 6, 'not moving');
 					for (var i=19; i<60; i++)
 						insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
 						null , "nothing", "nothing", String.fromCharCode(97+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');
-					insertimage('#bababa', "WhiteQueen.png", "queen", "white", "e", 1, 'nothing');
+					insertimage('#bababa', "WhiteQueen.png", "Queen", "white", "e", 1, 'nothing');
 					for (var i=61; i<64; i++)
 						insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
 						null , "nothing", "nothing", String.fromCharCode(97+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');*/
@@ -540,18 +511,18 @@
 									showpromotewindow('block');
 									var result=0;
 									if (check(whichturn)) result+=1;
-									if (checkmate(whichturn==='white'? 'black' : 'white')) result+=10;
+									if (checkmate(opponent(whichturn))) result+=10;
 									switch (result)
 									{
 										case 0:
 											// Убрать запрет королю делать рокировку, т. к. угрозы нет
-											var king = $(".cell[colorside=" + opponent(whichturn) + "][figuretype='king']" )[0];
+											var king = $(".cell[colorside=" + opponent(whichturn) + "][figuretype='King']" )[0];
 											if(king.getAttribute('additional') === 'checked') king.setAttribute('additional', 'not moving');
 											break;
 										case 1:
 											addToLogNewLine('CHECK!');
 											// Запретить королю делать рокировку, пока ему угрожают
-											var king = $(".cell[colorside=" + opponent(whichturn) + "][figuretype='king']" )[0];
+											var king = $(".cell[colorside=" + opponent(whichturn) + "][figuretype='King']" )[0];
 											if(king.getAttribute('additional') === 'not moving') king.setAttribute('additional', 'checked');
 											break;
 										case 10:
@@ -561,7 +532,7 @@
 											addToLogNewLine('CHECKMATE!');
 											break;
 									}
-									whichturn = whichturn==='white'? 'black' : 'white';
+									whichturn = opponent(whichturn);
 									//makeJumpersMoving(whichturn);
 								}
 								else
@@ -576,45 +547,17 @@
 					$(".transformer").click(function(){
 						document.getElementById('window').style.display = 'none';			
 						document.getElementById('wrap').style.display = 'none';
-						var whitefigures = $(".cell[row='8'][figuretype='pawn']");
+						var whitefigures = $(".cell[row='8'][figuretype='Pawn']");
 						if (whitefigures.length)
 						{
 							whitefigures[0].setAttribute('figuretype', this.getAttribute("figuretype"));
-							switch(this.getAttribute("figuretype"))
-							{
-								case 'rook':
-									whitefigures[0].getElementsByTagName('img')[0].src = "WhiteRook.png";
-								return;
-								case 'knight':
-									whitefigures[0].getElementsByTagName('img')[0].src = "WhiteKnight.png";
-								return;
-								case 'bishop':
-									whitefigures[0].getElementsByTagName('img')[0].src = "WhiteBishop.png";
-								return;
-								case 'queen':
-									whitefigures[0].getElementsByTagName('img')[0].src = "WhiteQueen.png";
-								return;
-							}
+							whitefigures[0].getElementsByTagName('img')[0].src = "White" + this.getAttribute("figuretype") + ".png";
 						}
-						var blackfigures = $(".cell[row='1'][figuretype='pawn']");
+						var blackfigures = $(".cell[row='1'][figuretype='Pawn']");
 						if (blackfigures.length)
 						{
 							blackfigures[0].setAttribute('figuretype', this.getAttribute("figuretype"));
-							switch(this.getAttribute("figuretype"))
-							{
-								case 'rook':
-									blackfigures[0].getElementsByTagName('img')[0].src = "BlackRook.png";
-								return;
-								case 'knight':
-									blackfigures[0].getElementsByTagName('img')[0].src = "BlackKnight.png";
-								return;
-								case 'bishop':
-									blackfigures[0].getElementsByTagName('img')[0].src = "BlackBishop.png";
-								return;
-								case 'queen':
-									blackfigures[0].getElementsByTagName('img')[0].src = "BlackQueen.png";
-								return;
-							}
+							blackfigures[0].getElementsByTagName('img')[0].src = "Black" + this.getAttribute("figuretype") + ".png";
 						}
 					})
 				</script>
