@@ -14,8 +14,9 @@ io.sockets.on('connection', function (socket) {
 	this.emit('print');
 });*/
 
-// Подключаем модуль и ставим на прослушивание 3056-порта - 80й обычно занят под http-сервер
-var io = require('socket.io').listen(3056); 
+var rooms = [{white: null, black: null}];
+// Подключаем модуль и ставим на прослушивание 9898-порта - 80й обычно занят под http-сервер
+var io = require('socket.io').listen(9898); 
 // Отключаем вывод полного лога - пригодится в production'е
 io.set('log level', 1);
 // Навешиваем обработчик на подключение нового клиента
@@ -40,12 +41,90 @@ io.sockets.on('connection', function (socket) {
 		var time = (new Date).toLocaleTimeString();
 		io.sockets.json.send({'event': 'userSplit', 'name': ID, 'time': time});
 	});
+	socket.on('roomsList_get', function(){
+		console.log('on');
+		socket.emit('roomsList_get_return',  'Hello Client' );
+	});
+	
+	socket.on('turn_move', function(move){
+		/*console.log('turn_move');
+		console.log(move.from.x);
+		console.log(move.from.y);
+		console.log(move.to.x);
+		console.log(move.to.y);*/
+		socket.broadcast.emit('player_move', {playerColor: 'white', from: {x: move.from.x,y: move.from.y }, to: {x: move.to.x, y: move.to.y}});
+	});
+	
+	socket.on('game_find', function(){
+		//console.log(socket.id);
+		var i;
+		for (i=0; i < rooms.length; i++)
+		{
+			if (rooms[i].white === null)
+			{
+				socket.join(rooms[i]);
+				rooms[i].white = socket.id;
+				return;
+			}
+			if (rooms[i].black === null)
+			{
+				socket.join(rooms[i]);
+				rooms[i].black = socket.id;
+				io.sockets.socket(rooms[i].white).emit('game_found', {color: 'white', roomID: i.toString()});
+				io.sockets.socket(rooms[i].black).emit('game_found', {color: 'black', roomID: i.toString()});
+				return;
+			}
+		}
+		rooms[i] = {white: socket.id, black: null};
+		socket.join(rooms[i]);
+	});
+	
+	socket.on('game_stopFinding', function(){
+		var i;
+		for (i=0; i < rooms.length; i++)
+		{
+			if (rooms[i].white === socket.id)
+			{
+				socket.leave(rooms[i]);
+				rooms[i].white = null;
+				return;
+			}
+			if (rooms[i].black === socket.id)
+			{
+				socket.leave(rooms[i]);
+				rooms[i].black = null;
+				return;
+			}
+		}
+	});
+	
+	/*socket.on('turn_move', function(move){
+		var i;
+		for (i=0; i < rooms.length; i++)
+		{
+			if (rooms[i].white === socket.id)
+			{
+				socket.leave(rooms[i]);
+				rooms[i].white = null;
+				return;
+			}
+			if (rooms[i].black === socket.id)
+			{
+				socket.leave(rooms[i]);
+				rooms[i].black = null;
+				return;
+			}
+		}
+	});*/
 });
 
-io.sockets.on("roomsList_get", roomsList);
 
-roomsList()
-{
+
+
+/*{
 	//return [{roomID:"qwerty", length:1}, {roomID:"asdfg", length:0}, {roomID:"zxcvb", length:2}];
-	return '22';
-};
+	a = '22';
+};*/
+
+
+

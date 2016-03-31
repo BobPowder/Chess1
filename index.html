@@ -80,6 +80,10 @@
 				</div>
 				
 				<script type="text/javascript">
+					function addToLogNewLine(str)
+					{
+						$("#logs").html($('#logs').html() + "<br>" + str);
+					}
 					// Создаем текст сообщений для событий
 					strings = {
 						'connected': '[sys][time]%time%[/time]: Вы успешно соединились к сервером как [user]%name%[/user].[/sys]',
@@ -98,12 +102,12 @@
 						socket.on('connect', function () {
 							socket.on('message', function (msg) {
 								// Добавляем в лог сообщение, заменив время, имя и текст на полученные
-								document.querySelector('#logs').innerHTML += strings[msg.event].replace(/\[([a-z]+)\]/g, '<span class="$1">').replace(/\[\/[a-z]+\]/g, '</span>').replace(/\%time\%/, msg.time).replace(/\%name\%/, msg.name).replace(/\%text\%/, unescape(msg.text).replace('<', '&lt;').replace('>', '&gt;')) + '<br>';
+								$('#logs').innerHTML += strings[msg.event].replace(/\[([a-z]+)\]/g, '<span class="$1">').replace(/\[\/[a-z]+\]/g, '</span>').replace(/\%time\%/, msg.time).replace(/\%name\%/, msg.name).replace(/\%text\%/, unescape(msg.text).replace('<', '&lt;').replace('>', '&gt;')) + '<br>';
 								// Прокручиваем лог в конец
-								document.querySelector('#logs').scrollTop = document.querySelector('#log').scrollHeight;
+								$('#logs').scrollTop = $('#logs').scrollHeight;
 							});
 							// При нажатии <Enter> или кнопки отправляем текст
-							document.querySelector('#input').onkeypress = function(e) {
+							/*document.querySelector('#input').onkeypress = function(e) {
 								if (e.which == '13') {
 									// Отправляем содержимое input'а, закодированное в escape-последовательность
 									socket.send(escape(document.querySelector('#input').value));
@@ -114,9 +118,34 @@
 							document.querySelector('#send').onclick = function() {
 								socket.send(escape(document.querySelector('#input').value));
 								document.querySelector('#input').value = '';
-							};		
+							};*/
+																	
 						});
-					};
+						socket.on('roomsList_get_return', function(data){
+								addToLogNewLine('lalal');
+								addToLogNewLine(data);
+							});	
+							
+						socket.on('player_move', function(move){
+								addToLogNewLine('player_move');
+								addToLogNewLine(move.playerColor);
+								addToLogNewLine(move.from.x);
+								addToLogNewLine(move.from.y);
+								addToLogNewLine(move.to.x);
+								addToLogNewLine(move.to.y);
+							});	
+						
+						$('#logs').click(function(){
+							addToLogNewLine('emit');
+							socket.emit('roomsList_get');
+						})
+						
+						$('#mainChessBoard').click(function(){
+							addToLogNewLine('emit_turn_move');
+							socket.emit('turn_move', { from: {x: 'e', y: 2 }, to: { x: 'e', y: 4}});				
+						})
+						
+					};	
 				</script>
 		</body>
     </html>

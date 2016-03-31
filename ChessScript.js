@@ -176,12 +176,12 @@ function ismovecorrect(touchedfigure, destination)
 			return (rowdifference(touchedfigure, destination) === columndifference(touchedfigure, destination)) &&
 					isanyonebetween(touchedfigure, destination);
 		case 'Pawn':
-			if ((destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === 'white'? 1 : -1 )) &&
+			if ((destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === yourturn ? 1 : -1 )) &&
 				(touchedfigure.getAttribute('column') === destination.getAttribute('column') && (destination.getAttribute('figuretype') === 'nothing')  || 
 				(columndifference(touchedfigure, destination) === 1  && (destination.getAttribute('figuretype') != 'nothing' || readytobackstab(touchedfigure, destination)))))
 				return true;
 				
-			if (destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === 'white'? 2 : -2 ) &&
+			if (destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === yourturn ? 2 : -2 ) &&
 				touchedfigure.getAttribute('column') === destination.getAttribute('column') && 
 				destination.getAttribute('figuretype') === 'nothing' && 
 				(touchedfigure.hasAttribute('additional') && touchedfigure.getAttribute('additional') === 'not moving') &&
@@ -319,36 +319,53 @@ function showpromotewindow(state)
 }
 
 var socket;
-window.onload = function() {
-	// Создаем соединение с сервером; websockets почему-то в Хроме не работают, используем xhr
-	if (navigator.userAgent.toLowerCase().indexOf('chrome') != -1) {
-		socket = io.connect('http://localhost:3056', {'transports': ['xhr-polling']});
-	} else {
-		socket = io.connect('http://localhost:3056');
-	}
-	socket.on('connect', function () {
-		/*socket.on('message', function (msg) {
-			// Добавляем в лог сообщение, заменив время, имя и текст на полученные
-			document.querySelector('#logs').innerHTML += strings[msg.event].replace(/\[([a-z]+)\]/g, '<span class="$1">').replace(/\[\/[a-z]+\]/g, '</span>').replace(/\%time\%/, msg.time).replace(/\%name\%/, msg.name).replace(/\%text\%/, unescape(msg.text).replace('<', '&lt;').replace('>', '&gt;')) + '<br>';
-			// Прокручиваем лог в конец
-			document.querySelector('#logs').scrollTop = document.querySelector('#log').scrollHeight;
-		});
-		// При нажатии <Enter> или кнопки отправляем текст
-		document.querySelector('#input').onkeypress = function(e) {
-			if (e.which == '13') {
-				// Отправляем содержимое input'а, закодированное в escape-последовательность
-				socket.send(escape(document.querySelector('#input').value));
-				// Очищаем input
-				document.querySelector('#input').value = '';
-			}
-		};
-		document.querySelector('#send').onclick = function() {
-			socket.send(escape(document.querySelector('#input').value));
-			document.querySelector('#input').value = '';
-		};*/
-		
-	});
+// Создаем текст сообщений для событий
+strings = {
+	'connected': '[sys][time]%time%[/time]: Вы успешно соединились к сервером как [user]%name%[/user].[/sys]',
+	'userJoined': '[sys][time]%time%[/time]: Пользователь [user]%name%[/user] присоединился к чату.[/sys]',
+	'messageSent': '[out][time]%time%[/time]: [user]%name%[/user]: %text%[/out]',
+	'messageReceived': '[in][time]%time%[/time]: [user]%name%[/user]: %text%[/in]',
+	'userSplit': '[sys][time]%time%[/time]: Пользователь [user]%name%[/user] покинул чат.[/sys]'
 };
+//window.onload = function() {
+// Создаем соединение с сервером; websockets почему-то в Хроме не работают, используем xhr
+if (navigator.userAgent.toLowerCase().indexOf('chrome') != -1) {
+	socket = io.connect('http://localhost:9898', {'transports': ['xhr-polling']});
+} else {
+	socket = io.connect('http://localhost:9898');
+}
+socket.on('connect', function () {
+	socket.on('message', function (msg) {
+		// Добавляем в лог сообщение, заменив время, имя и текст на полученные
+		$('#logs').innerHTML += strings[msg.event].replace(/\[([a-z]+)\]/g, '<span class="$1">').replace(/\[\/[a-z]+\]/g, '</span>').replace(/\%time\%/, msg.time).replace(/\%name\%/, msg.name).replace(/\%text\%/, unescape(msg.text).replace('<', '&lt;').replace('>', '&gt;')) + '<br>';
+		// Прокручиваем лог в конец
+		$('#logs').scrollTop = $('#logs').scrollHeight;
+	});
+	// При нажатии <Enter> или кнопки отправляем текст
+	/*document.querySelector('#input').onkeypress = function(e) {
+		if (e.which == '13') {
+			// Отправляем содержимое input'а, закодированное в escape-последовательность
+			socket.send(escape(document.querySelector('#input').value));
+			// Очищаем input
+			document.querySelector('#input').value = '';
+		}
+	};
+	document.querySelector('#send').onclick = function() {
+		socket.send(escape(document.querySelector('#input').value));
+		document.querySelector('#input').value = '';
+	};*/
+											
+});
+	
+socket.on('game_found', function(data)
+{
+	document.getElementById('menu').style.display = "none";            
+	document.getElementById('wrap').style.display = "none"; 
+	//Let the game begin!
+	BeginGame(data.color);
+});
+//};
+	
 
 document.getElementById('menu').style.display = "block";            
 document.getElementById('wrap').style.display = "block"; 
@@ -356,55 +373,94 @@ $( ".button" ).click(function(){
 	switch(this.innerHTML)
 	{
 		case 'List':
-			$("#roomlist").html($('#roomlist').html() + socket.emit("roomsList_get"));
-			socket.emit("roomsList_get").forEach(function(item, i, arr) {
-				$("#roomlist").html($('#roomlist').html() + item);
-			});
-			
+			//$("#roomlist").html($('#roomlist').html()));
 			//$("#roomlist").html($('#roomlist').html() + "Hello!");
+			break;
+		case 'Wait':
+			socket.emit('game_find');
+			this.innerHTML = 'Stop waiting';
+			break;
+		case 'Stop waiting':
+			socket.emit('game_stopFinding');
+			this.innerHTML = 'Wait';
 			break;
 	}
 });
 
 
-function BeginGame(){
-	var whichturn = 'white';
-	var isfiguretouched = false;
+var yourturn;
+var whichturn = 'white';
+var isfiguretouched = false;
 
-	var touchedfigure = document.createElement("div");
-	touchedfigure.appendChild(document.createElement("img"));
+var touchedfigure = document.createElement("div");
+touchedfigure.appendChild(document.createElement("img"));
+	
+function BeginGame(color){
+	yourturn = color;
+	if (color === 'white')
+	{
+		insertimage('#dedede', "BlackRook.png", "Rook", "black", "a", 8, 'not moving');
+		insertimage('#bababa', "BlackKnight.png", "Knight", "black", "b", 8, 'nothing');
+		insertimage('#dedede', "BlackBishop.png", "Bishop", "black", "c", 8, 'nothing');
+		insertimage('#bababa', "BlackQueen.png", "Queen", "black", "d", 8, 'nothing');
+		insertimage('#dedede', "BlackKing.png", "King", "black", "e", 8, 'not moving');
+		insertimage('#bababa', "BlackBishop.png", "Bishop", "black", "f", 8, 'nothing');
+		insertimage('#dedede', "BlackKnight.png", "Knight", "black", "g", 8, 'nothing');
+		insertimage('#bababa', "BlackRook.png", "Rook", "black", "h", 8, 'not moving');
 
+		for (var i=8; i<16; i++)
+			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
+			"BlackPawn.png", "Pawn", "black", String.fromCharCode(89+i), 7, 'not moving');
+						
+		for (var i=16; i<48; i++)
+			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
+			null , "nothing", "nothing", String.fromCharCode(97+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');
 
-	insertimage('#dedede', "BlackRook.png", "Rook", "black", "a", 8, 'not moving');
-	insertimage('#bababa', "BlackKnight.png", "Knight", "black", "b", 8, 'nothing');
-	insertimage('#dedede', "BlackBishop.png", "Bishop", "black", "c", 8, 'nothing');
-	insertimage('#bababa', "BlackQueen.png", "Queen", "black", "d", 8, 'nothing');
-	insertimage('#dedede', "BlackKing.png", "King", "black", "e", 8, 'not moving');
-	insertimage('#bababa', "BlackBishop.png", "Bishop", "black", "f", 8, 'nothing');
-	insertimage('#dedede', "BlackKnight.png", "Knight", "black", "g", 8, 'nothing');
-	insertimage('#bababa', "BlackRook.png", "Rook", "black", "h", 8, 'not moving');
+		for (var i=48; i<56; i++)
+			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'),
+			"WhitePawn.png", "Pawn", "white", String.fromCharCode(49+i), 2, 'not moving');
+						
+		insertimage("#bababa", "WhiteRook.png", "Rook", "white", "a", 1, 'not moving');
+		insertimage('#dedede', "WhiteKnight.png", "Knight", "white", "b", 1, 'nothing');
+		insertimage("#bababa", "WhiteBishop.png", "Bishop", "white", "c", 1, 'nothing');
+		insertimage('#dedede', "WhiteQueen.png", "Queen", "white", "d", 1, 'nothing');
+		insertimage("#bababa", "WhiteKing.png", "King", "white", "e", 1, 'not moving');
+		insertimage('#dedede', "WhiteBishop.png", "Bishop", "white", "f", 1, 'nothing');
+		insertimage("#bababa", "WhiteKnight.png", "Knight", "white", "g", 1, 'nothing');
+		insertimage('#dedede', "WhiteRook.png", "Rook", "white", "h", 1, 'not moving');
+	}
+	if (color === 'black')
+	{
+		insertimage('#dedede', "WhiteRook.png", "Rook", "white", "a", 8, 'not moving');
+		insertimage('#bababa', "WhiteKnight.png", "Knight", "white", "b", 8, 'nothing');
+		insertimage('#dedede', "WhiteBishop.png", "Bishop", "white", "c", 8, 'nothing');
+		insertimage('#bababa', "WhiteQueen.png", "Queen", "white", "d", 8, 'nothing');
+		insertimage('#dedede', "WhiteKing.png", "King", "white", "e", 8, 'not moving');
+		insertimage('#bababa', "WhiteBishop.png", "Bishop", "white", "f", 8, 'nothing');
+		insertimage('#dedede', "WhiteKnight.png", "Knight", "white", "g", 8, 'nothing');
+		insertimage('#bababa', "WhiteRook.png", "Rook", "white", "h", 8, 'not moving');
 
-	for (var i=8; i<16; i++)
-		insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
-		"BlackPawn.png", "Pawn", "black", String.fromCharCode(89+i), 7, 'not moving');
-					
-	for (var i=16; i<48; i++)
-		insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
-		null , "nothing", "nothing", String.fromCharCode(97+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');
+		for (var i=8; i<16; i++)
+			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
+			"WhitePawn.png", "Pawn", "white", String.fromCharCode(89+i), 7, 'not moving');
+						
+		for (var i=16; i<48; i++)
+			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
+			null , "nothing", "nothing", String.fromCharCode(97+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');
 
-	for (var i=48; i<56; i++)
-		insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'),
-		"WhitePawn.png", "Pawn", "white", String.fromCharCode(49+i), 2, 'not moving');
-					
-	insertimage("#bababa", "WhiteRook.png", "Rook", "white", "a", 1, 'not moving');
-	insertimage('#dedede', "WhiteKnight.png", "Knight", "white", "b", 1, 'nothing');
-	insertimage("#bababa", "WhiteBishop.png", "Bishop", "white", "c", 1, 'nothing');
-	insertimage('#dedede', "WhiteQueen.png", "Queen", "white", "d", 1, 'nothing');
-	insertimage("#bababa", "WhiteKing.png", "King", "white", "e", 1, 'not moving');
-	insertimage('#dedede', "WhiteBishop.png", "Bishop", "white", "f", 1, 'nothing');
-	insertimage("#bababa", "WhiteKnight.png", "Knight", "white", "g", 1, 'nothing');
-	insertimage('#dedede', "WhiteRook.png", "Rook", "white", "h", 1, 'not moving');
-
+		for (var i=48; i<56; i++)
+			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'),
+			"BlackPawn.png", "Pawn", "black", String.fromCharCode(49+i), 2, 'not moving');
+						
+		insertimage("#bababa", "BlackRook.png", "Rook", "black", "a", 1, 'not moving');
+		insertimage('#dedede', "BlackKnight.png", "Knight", "black", "b", 1, 'nothing');
+		insertimage("#bababa", "BlackBishop.png", "Bishop", "black", "c", 1, 'nothing');
+		insertimage('#dedede', "BlackQueen.png", "Queen", "black", "d", 1, 'nothing');
+		insertimage("#bababa", "BlackKing.png", "King", "black", "e", 1, 'not moving');
+		insertimage('#dedede', "BlackBishop.png", "Bishop", "black", "f", 1, 'nothing');
+		insertimage("#bababa", "BlackKnight.png", "Knight", "black", "g", 1, 'nothing');
+		insertimage('#dedede', "BlackRook.png", "Rook", "black", "h", 1, 'not moving');
+	}
 
 /*for (var i=0; i<3; i++)
 	insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
@@ -424,7 +480,8 @@ for (var i=61; i<64; i++)
 	null , "nothing", "nothing", String.fromCharCode(97+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');*/
 }
 
-$( ".cell" ).click(function(){
+
+$( "#mainChessBoard" ).on('click', '.cell', function(){
 	if (!isfiguretouched || this.getAttribute('colorside') === whichturn)
 	{
 		if (this.getAttribute('figuretype')!='nothing' && this.getAttribute('colorside')===whichturn)
@@ -456,6 +513,8 @@ $( ".cell" ).click(function(){
 			{
 				addToLog( " - " + this.getAttribute('column') + this.getAttribute('row'));
 				isfiguretouched = !isfiguretouched;
+				socket.emit('turn_move', {from: {x: walkingfigure.getAttribute('column'), y: walkingfigure.getAttribute('row')},
+											to: {x: this.getAttribute('column'), y: this.getAttribute('row')}});
 				move2(walkingfigure, this);
 				if (roquemode)
 				{
@@ -520,13 +579,13 @@ $( ".cell" ).click(function(){
 $(".transformer").click(function(){
 	document.getElementById('window').style.display = 'none';			
 	document.getElementById('wrap').style.display = 'none';
-	var whitefigures = $(".cell[row='8'][figuretype='Pawn']");
+	var whitefigures = $(".cell[row=" + (yourturn==='white'? '8' : '1') +"][figuretype='Pawn']");
 	if (whitefigures.length)
 	{
 		whitefigures[0].setAttribute('figuretype', this.getAttribute("figuretype"));
 		whitefigures[0].getElementsByTagName('img')[0].src = "White" + this.getAttribute("figuretype") + ".png";
 	}
-	var blackfigures = $(".cell[row='1'][figuretype='Pawn']");
+	var blackfigures = $(".cell[row="+ (yourturn==='white'? '1' : '8') +"][figuretype='Pawn']");
 	if (blackfigures.length)
 	{
 		blackfigures[0].setAttribute('figuretype', this.getAttribute("figuretype"));
