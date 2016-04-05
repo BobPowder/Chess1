@@ -79,8 +79,8 @@ io.sockets.on('connection', function (socket) {
 			{
 				socket.join(rooms[i]);
 				rooms[i].black = socket.id;
-				io.sockets.connected[rooms[i].white].emit('game_found', {color: 'white', roomID: i.toString()});
-				io.sockets.connected[rooms[i].black].emit('game_found', {color: 'black', roomID: i.toString()});
+				io.sockets.socket(rooms[i].white).emit('game_found', {color: 'white', roomID: i.toString()});
+				io.sockets.socket(rooms[i].black).emit('game_found', {color: 'black', roomID: i.toString()});
 				return;
 			}
 		}
@@ -121,14 +121,14 @@ io.sockets.on('connection', function (socket) {
 		{
 			if (rooms[i].white === socket.id)
 			{
-				io.sockets.connected[rooms[i].black].emit('player_move', { playerColor: 'white', 
+				io.sockets.socket(rooms[i].black).emit('player_move', { playerColor: 'white', 
 																				  from: {x: move.from.x, y: move.from.y},
 																					to: {x: move.to.x,   y: move.to.y  }});
 				return;
 			}
 			if (rooms[i].black === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('player_move', { playerColor: 'black', 
+				io.sockets.socket(rooms[i].white).emit('player_move', { playerColor: 'black', 
 																				  from: {x: move.from.x, y: move.from.y},
 																					to: {x: move.to.x,   y: move.to.y  }});
 				return;
@@ -144,13 +144,13 @@ io.sockets.on('connection', function (socket) {
 		{
 			if (rooms[i].white === socket.id)
 			{
-				io.sockets.connected[rooms[i].black].emit('player_castling', { playerColor: 'white', 
+				io.sockets.socket(rooms[i].black).emit('player_castling', { playerColor: 'white', 
 																				from: {x: move.from.x, y: move.from.y}});
 				return;
 			}
 			if (rooms[i].black === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('player_castling', { playerColor: 'black', 
+				io.sockets.socket(rooms[i].white).emit('player_castling', { playerColor: 'black', 
 																				from: {x: move.from.x, y: move.from.y}});
 				return;
 			}
@@ -165,7 +165,7 @@ io.sockets.on('connection', function (socket) {
 		{
 			if (rooms[i].white === socket.id)
 			{
-				io.sockets.connected[rooms[i].black].emit('player_promotion', { playerColor: 'white', 
+				io.sockets.socket(rooms[i].black).emit('player_promotion', { playerColor: 'white', 
 																				  from: {x: move.from.x, y: move.from.y},
 																					to: {x: move.to.x,   y: move.to.y  },
 																					newPiece: move.newPiece.toLowerCase()});
@@ -173,7 +173,7 @@ io.sockets.on('connection', function (socket) {
 			}
 			if (rooms[i].black === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('player_promotion', { playerColor: 'black', 
+				io.sockets.socket(rooms[i].white).emit('player_promotion', { playerColor: 'black', 
 																				  from: {x: move.from.x, y: move.from.y},
 																					to: {x: move.to.x,   y: move.to.y  },
 																				newPiece: move.newPiece.toLowerCase()});
@@ -187,12 +187,12 @@ io.sockets.on('connection', function (socket) {
 		{
 			if (rooms[i].white === socket.id)
 			{
-				io.sockets.connected[rooms[i].black].emit('player_mate');
+				io.sockets.socket(rooms[i].black).emit('player_mate');
 				return;
 			}
 			if (rooms[i].black === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('player_mate');
+				io.sockets.socket(rooms[i].white).emit('player_mate');
 				return;
 			}
 		}
@@ -203,12 +203,12 @@ io.sockets.on('connection', function (socket) {
 		{
 			if (rooms[i].white === socket.id)
 			{
-				io.sockets.connected[rooms[i].black].emit('turn_draw');
+				io.sockets.socket(rooms[i].black).emit('turn_draw');
 				return;
 			}
 			if (rooms[i].black === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('turn_draw');
+				io.sockets.socket(rooms[i].white).emit('turn_draw');
 				return;
 			}
 		}
@@ -219,15 +219,15 @@ io.sockets.on('connection', function (socket) {
 		{
 			if (rooms[i].white === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('game_end', {msg: "invalid turn", winnerColor: "black"});
-				io.sockets.connected[rooms[i].black].emit('game_end', {msg: "invalid turn", winnerColor: "black"});
+				io.sockets.socket(rooms[i].white).emit('game_end', {msg: "invalid turn", winnerColor: "black"});
+				io.sockets.socket(rooms[i].black).emit('game_end', {msg: "invalid turn", winnerColor: "black"});
 				desolate_room(socket, i);
 				return;
 			}
 			if (rooms[i].black === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('game_end', {msg: "invalid turn", winnerColor: "white"});
-				io.sockets.connected[rooms[i].black].emit('game_end', {msg: "invalid turn", winnerColor: "white"});
+				io.sockets.socket(rooms[i].white).emit('game_end', {msg: "invalid turn", winnerColor: "white"});
+				io.sockets.socket(rooms[i].black).emit('game_end', {msg: "invalid turn", winnerColor: "white"});
 				desolate_room(socket, i);
 				return;
 			}
@@ -239,15 +239,15 @@ io.sockets.on('connection', function (socket) {
 		{
 			if (rooms[i].white === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('game_end', {msg: "mate", winnerColor: "black"});
-				io.sockets.connected[rooms[i].black].emit('game_end', {msg: "mate", winnerColor: "black"});
+				io.sockets.socket(rooms[i].white).emit('game_end', {msg: "mate", winnerColor: "black"});
+				io.sockets.socket(rooms[i].black).emit('game_end', {msg: "mate", winnerColor: "black"});
 				desolate_room(socket, i);
 				return;
 			}
 			if (rooms[i].black === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('game_end', {msg: "mate", winnerColor: "white"});
-				io.sockets.connected[rooms[i].black].emit('game_end', {msg: "mate", winnerColor: "white"});
+				io.sockets.socket(rooms[i].white).emit('game_end', {msg: "mate", winnerColor: "white"});
+				io.sockets.socket(rooms[i].black).emit('game_end', {msg: "mate", winnerColor: "white"});
 				desolate_room(socket, i);
 				return;
 			}
@@ -259,15 +259,15 @@ io.sockets.on('connection', function (socket) {
 		{
 			if (rooms[i].white === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('game_end', {msg: "draw", winnerColor: "black"});
-				io.sockets.connected[rooms[i].black].emit('game_end', {msg: "draw", winnerColor: "black"});
+				io.sockets.socket(rooms[i].white).emit('game_end', {msg: "draw", winnerColor: "black"});
+				io.sockets.socket(rooms[i].black).emit('game_end', {msg: "draw", winnerColor: "black"});
 				desolate_room(socket, i);
 				return;
 			}
 			if (rooms[i].black === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('game_end', {msg: "draw", winnerColor: "white"});
-				io.sockets.connected[rooms[i].black].emit('game_end', {msg: "draw", winnerColor: "white"});
+				io.sockets.socket(rooms[i].white).emit('game_end', {msg: "draw", winnerColor: "white"});
+				io.sockets.socket(rooms[i].black).emit('game_end', {msg: "draw", winnerColor: "white"});
 				desolate_room(socket, i);
 				return;
 			}
@@ -279,15 +279,15 @@ io.sockets.on('connection', function (socket) {
 		{
 			if (rooms[i].white === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('game_end', {msg: "leave", winnerColor: "black"});
-				io.sockets.connected[rooms[i].black].emit('game_end', {msg: "leave", winnerColor: "black"});
+				io.sockets.socket(rooms[i].white).emit('game_end', {msg: "leave", winnerColor: "black"});
+				io.sockets.socket(rooms[i].black).emit('game_end', {msg: "leave", winnerColor: "black"});
 				desolate_room(socket, i);
 				return;
 			}
 			if (rooms[i].black === socket.id)
 			{
-				io.sockets.connected[rooms[i].white].emit('game_end', {msg: "leave", winnerColor: "white"});
-				io.sockets.connected[rooms[i].black].emit('game_end', {msg: "leave", winnerColor: "white"});
+				io.sockets.socket(rooms[i].white).emit('game_end', {msg: "leave", winnerColor: "white"});
+				io.sockets.socket(rooms[i].black).emit('game_end', {msg: "leave", winnerColor: "white"});
 				desolate_room(socket, i);
 				return;
 			}

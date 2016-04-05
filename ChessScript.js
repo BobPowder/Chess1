@@ -176,12 +176,12 @@ function ismovecorrect(touchedfigure, destination)
 			return (rowdifference(touchedfigure, destination) === columndifference(touchedfigure, destination)) &&
 					isanyonebetween(touchedfigure, destination);
 		case 'Pawn':
-			if ((destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === yourturn ? 1 : -1 )) &&
+			if ((destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === 'white' ? 1 : -1 )) &&
 				(touchedfigure.getAttribute('column') === destination.getAttribute('column') && (destination.getAttribute('figuretype') === 'nothing')  || 
 				(columndifference(touchedfigure, destination) === 1  && (destination.getAttribute('figuretype') != 'nothing' || readytobackstab(touchedfigure, destination)))))
 				return true;
 				
-			if (destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === yourturn ? 2 : -2 ) &&
+			if (destination.getAttribute('row') - touchedfigure.getAttribute('row') === (touchedfigure.getAttribute('colorside') === 'white' ? 2 : -2 ) &&
 				touchedfigure.getAttribute('column') === destination.getAttribute('column') && 
 				destination.getAttribute('figuretype') === 'nothing' && 
 				(touchedfigure.hasAttribute('additional') && touchedfigure.getAttribute('additional') === 'not moving') &&
@@ -315,6 +315,7 @@ function showpromotewindow(state)
 		addToLogNewLine('TRANSFORM!');
 		document.getElementById('window').style.display = state;            
 		document.getElementById('wrap').style.display = state; 
+
 	}
 }
 
@@ -365,7 +366,138 @@ socket.on('game_found', function(data)
 	BeginGame(data.color);
 });
 //};
+
+socket.on('player_move', function(data)
+{
+	//addToLogNewLine('player_move');
+	var walkingfigure = finddiv(data.from.x, data.from.y)[0];
+	var destination =  finddiv(data.to.x, data.to.y)[0];
+	if (data.playercolor === yourturn || 
+	!ismovecorrect(walkingfigure, destination) ||
+	isSimulatedMoveThreatening(walkingfigure, destination))
+	{
+		socket.emit("turnValidation_invalid");
+		addToLogNewLine("Opponent made an illegal move");
+	}
+	else 
+	{
+		whichturn = opponent(whichturn);
+		addToLogNewLine( 
+				walkingfigure.getAttribute('colorside') + ' ' +
+				walkingfigure.getAttribute('figuretype')+ ' ' +
+				walkingfigure.getAttribute('column')+
+				walkingfigure.getAttribute('row'));
+		addToLog( " - " + destination.getAttribute('column') + destination.getAttribute('row'));
+		move2(walkingfigure, destination);
+		
+	}
+});	
+
+socket.on('player_castling', function(data)
+{
+	addToLogNewLine('player_castling');
+	var rook = finddiv(data.from.x, data.from.y)[0];
+	var king = finddiv('e', data.from.y)[0];
+	if (king.getAttribute("additional") === 'not moving' &&
+		king.getAttribute("figuretype") === 'King' &&
+		rook.getAttribute('figuretype') === 'Rook' &&
+		rook.getAttribute('colorside') === king.getAttribute('colorside') &&
+		rook.getAttribute('additional') === 'not moving' &&
+		isanyonebetween(king, rook))
+		{
+			
+			move2(rook, finddiv( data.from.x === 'a'? 'd' : 'f', data.from.y)[0]);
+			move2(king, finddiv( data.from.x === 'a'? 'c' : 'g', data.from.y)[0]);
+			whichturn = opponent(whichturn);
+		}
+		else 
+		{
+			socket.emit("turnValidation_invalid");
+			addToLogNewLine("Opponent made an illegal move");
+		}
+});	
+
+
+socket.on('player_promotion', function(data)
+{
+	var pawn = finddiv(data.to.x, data.to.y)[0];
+	addToLogNewLine(pawn.getAttribute("colorside"));
+	addToLogNewLine(pawn.getAttribute("figuretype"));
+	addToLogNewLine(pawn.getAttribute("row"));
+	addToLogNewLine(pawn.getAttribute("column"));
+	addToLogNewLine(pawn.getAttribute("row") === 8);
+	addToLogNewLine(pawn.getAttribute("figuretype") === "Pawn");
+	addToLogNewLine(pawn.getAttribute("colorside") === "white");
+	if((pawn.getAttribute("row") === '8' && pawn.getAttribute("colorside") === "white") ||
+	   (pawn.getAttribute("row") === '1' && pawn.getAttribute("colorside") === "black") && 
+		pawn.getAttribute("figuretype") === "Pawn")
+		{
+			switch(data.newPiece)
+			{
+				case "knight":
+					pawn.setAttribute('figuretype', "Knight");
+					pawn.getElementsByTagName('img')[0].src = (pawn.getAttribute("colorside") === 'white'? "White" : "Black") + "Knight.png";
+				break;
+				case "rook":
+					pawn.setAttribute('figuretype', "Rook");
+					pawn.getElementsByTagName('img')[0].src = (pawn.getAttribute("colorside") === 'white'? "White" : "Black") + "Rook.png";
+				break;
+				case "bighop":
+					pawn.setAttribute('figuretype', "Bishop");
+					pawn.getElementsByTagName('img')[0].src = (pawn.getAttribute("colorside") === 'white'? "White" : "Black") + "Bishop.png";
+				break;
+				case "queen":
+					pawn.setAttribute('figuretype', "Queen");
+					pawn.getElementsByTagName('img')[0].src = (pawn.getAttribute("colorside") === 'white'? "White" : "Black") + "Queen.png";
+				break;
+				default:
+					addToLogNewLine("Unknown figure");
+				break;
+			}
+		}
+		else
+		{
+			socket.emit("turnValidation_invalid");
+			addToLogNewLine("Opponent made an illegal promotion");
+		}
+});
+
+socket.on('player_mate', function(){
+	if (check(opponent(yourturn)) && checkmate(yourturn))
+	{
+		socket.emit("turnValidation_mate");
+		addToLogNewLine("CHECKMATE!");
+	}
+	else
+	{
+		socket.emit("turnValidation_invalid");
+		addToLogNewLine('Something happened, invalid checkmate');
+	}
+});
+
+socket.on('player_draw', function(){
+	if (!check(opponent(yourturn)) && checkmate(yourturn))
+	{
+		socket.emit("turnValidation_draw");
+		addToLogNewLine("STALEMATE!");
+	}
+	else
+	{
+		socket.emit("turnValidation_invalid");
+		addToLogNewLine('Something happened, invalid stalemate');
+	}
+});
+
+socket.on('game_end', function(data){
+	addToLogNewLine(data.msg);
+	addToLogNewLine(data.winnerColor === null? "Draw!" : data.winnerColor + " wins!");
+	$("#mainChessBoard").children().remove();
 	
+	document.getElementById('menu').style.display = "block";            
+	document.getElementById('wrap').style.display = "block"; 
+	$(".button:contains('Stop waiting')")[0].innerHTML = 'Wait';
+	
+});
 
 document.getElementById('menu').style.display = "block";            
 document.getElementById('wrap').style.display = "block"; 
@@ -383,6 +515,9 @@ $( ".button" ).click(function(){
 		case 'Stop waiting':
 			socket.emit('game_stopFinding');
 			this.innerHTML = 'Wait';
+			break;
+		case 'Leave':
+			socket.emit('room_leave');
 			break;
 	}
 });
@@ -431,35 +566,35 @@ function BeginGame(color){
 	}
 	if (color === 'black')
 	{
-		insertimage('#dedede', "WhiteRook.png", "Rook", "white", "a", 8, 'not moving');
-		insertimage('#bababa', "WhiteKnight.png", "Knight", "white", "b", 8, 'nothing');
-		insertimage('#dedede', "WhiteBishop.png", "Bishop", "white", "c", 8, 'nothing');
-		insertimage('#bababa', "WhiteQueen.png", "Queen", "white", "d", 8, 'nothing');
-		insertimage('#dedede', "WhiteKing.png", "King", "white", "e", 8, 'not moving');
-		insertimage('#bababa', "WhiteBishop.png", "Bishop", "white", "f", 8, 'nothing');
-		insertimage('#dedede', "WhiteKnight.png", "Knight", "white", "g", 8, 'nothing');
-		insertimage('#bababa', "WhiteRook.png", "Rook", "white", "h", 8, 'not moving');
+		insertimage('#dedede', "WhiteRook.png", "Rook", "white", "h", 1, 'not moving');
+		insertimage('#bababa', "WhiteKnight.png", "Knight", "white", "g", 1, 'nothing');
+		insertimage('#dedede', "WhiteBishop.png", "Bishop", "white", "f", 1, 'nothing');
+		insertimage('#bababa', "WhiteKing.png", "King", "white", "e", 1, 'not moving');
+		insertimage('#dedede', "WhiteQueen.png", "Queen", "white", "d", 1, 'nothing');
+		insertimage('#bababa', "WhiteBishop.png", "Bishop", "white", "c", 1, 'nothing');
+		insertimage('#dedede', "WhiteKnight.png", "Knight", "white", "b", 1, 'nothing');
+		insertimage('#bababa', "WhiteRook.png", "Rook", "white", "a", 1, 'not moving');
 
 		for (var i=8; i<16; i++)
 			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
-			"WhitePawn.png", "Pawn", "white", String.fromCharCode(89+i), 7, 'not moving');
+			"WhitePawn.png", "Pawn", "white", String.fromCharCode(112-i), 2, 'not moving');
 						
 		for (var i=16; i<48; i++)
 			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
-			null , "nothing", "nothing", String.fromCharCode(97+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');
+			null , "nothing", "nothing", String.fromCharCode(104-(i % 8)), 1 + (i - i % 8) / 8, 'nothing');
 
 		for (var i=48; i<56; i++)
 			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'),
-			"BlackPawn.png", "Pawn", "black", String.fromCharCode(49+i), 2, 'not moving');
+			"BlackPawn.png", "Pawn", "black", String.fromCharCode(152-i), 7, 'not moving');
 						
-		insertimage("#bababa", "BlackRook.png", "Rook", "black", "a", 1, 'not moving');
-		insertimage('#dedede', "BlackKnight.png", "Knight", "black", "b", 1, 'nothing');
-		insertimage("#bababa", "BlackBishop.png", "Bishop", "black", "c", 1, 'nothing');
-		insertimage('#dedede', "BlackQueen.png", "Queen", "black", "d", 1, 'nothing');
-		insertimage("#bababa", "BlackKing.png", "King", "black", "e", 1, 'not moving');
-		insertimage('#dedede', "BlackBishop.png", "Bishop", "black", "f", 1, 'nothing');
-		insertimage("#bababa", "BlackKnight.png", "Knight", "black", "g", 1, 'nothing');
-		insertimage('#dedede', "BlackRook.png", "Rook", "black", "h", 1, 'not moving');
+		insertimage("#bababa", "BlackRook.png", "Rook", "black", "h", 8, 'not moving');
+		insertimage('#dedede', "BlackKnight.png", "Knight", "black", "g", 8, 'nothing');
+		insertimage("#bababa", "BlackBishop.png", "Bishop", "black", "f", 8, 'nothing');
+		insertimage('#dedede', "BlackKing.png", "King", "black", "e", 8, 'not moving');
+		insertimage("#bababa", "BlackQueen.png", "Queen", "black", "d", 8, 'nothing');
+		insertimage('#dedede', "BlackBishop.png", "Bishop", "black", "c", 8, 'nothing');
+		insertimage("#bababa", "BlackKnight.png", "Knight", "black", "b", 8, 'nothing');
+		insertimage('#dedede', "BlackRook.png", "Rook", "black", "a", 8, 'not moving');
 	}
 
 /*for (var i=0; i<3; i++)
@@ -482,99 +617,113 @@ for (var i=61; i<64; i++)
 
 
 $( "#mainChessBoard" ).on('click', '.cell', function(){
-	if (!isfiguretouched || this.getAttribute('colorside') === whichturn)
+	if (whichturn === yourturn)
 	{
-		if (this.getAttribute('figuretype')!='nothing' && this.getAttribute('colorside')===whichturn)
+		if (!isfiguretouched || this.getAttribute('colorside') === whichturn)
 		{
-			addToLogNewLine( 
-				this.getAttribute('colorside') + ' ' +
-				this.getAttribute('figuretype')+ ' ' +
-				this.getAttribute('column')+
-				this.getAttribute('row'));
-			isfiguretouched = true;
-			touchedfigure.setAttribute('colorside', this.getAttribute('colorside'));
-			touchedfigure.setAttribute('figuretype', this.getAttribute('figuretype'));
-			touchedfigure.setAttribute('row', this.getAttribute('row'));
-			touchedfigure.setAttribute('column', this.getAttribute('column'));
-			touchedfigure.getElementsByTagName("img")[0].src=this.getElementsByTagName("img")[0].src;
-			if (this.hasAttribute('additional')) touchedfigure.setAttribute('additional', this.getAttribute('additional'));
+			if (this.getAttribute('figuretype')!='nothing' && this.getAttribute('colorside')===whichturn)
+			{
+				addToLogNewLine( 
+					this.getAttribute('colorside') + ' ' +
+					this.getAttribute('figuretype')+ ' ' +
+					this.getAttribute('column')+
+					this.getAttribute('row'));
+				isfiguretouched = true;
+				touchedfigure.setAttribute('colorside', this.getAttribute('colorside'));
+				touchedfigure.setAttribute('figuretype', this.getAttribute('figuretype'));
+				touchedfigure.setAttribute('row', this.getAttribute('row'));
+				touchedfigure.setAttribute('column', this.getAttribute('column'));
+				touchedfigure.getElementsByTagName("img")[0].src=this.getElementsByTagName("img")[0].src;
+				if (this.hasAttribute('additional')) touchedfigure.setAttribute('additional', this.getAttribute('additional'));
+			}
 		}
-	}
-	else
-	{
-		var walkingfigure = finddiv(touchedfigure.getAttribute('column'), touchedfigure.getAttribute('row'))[0];
-
-		if (this.getAttribute('figuretype')==='nothing' || this.getAttribute('colorside')!=whichturn)
+		else
 		{
-			roquemode = false;
-			backstabmode = false;
-			jumping = false;
-			if (ismovecorrect(walkingfigure, this) && !isSimulatedMoveThreatening(walkingfigure, this))
+			var walkingfigure = finddiv(touchedfigure.getAttribute('column'), touchedfigure.getAttribute('row'))[0];
+
+			if (this.getAttribute('figuretype')==='nothing' || this.getAttribute('colorside')!=whichturn)
 			{
-				addToLog( " - " + this.getAttribute('column') + this.getAttribute('row'));
-				isfiguretouched = !isfiguretouched;
-				socket.emit('turn_move', {from: {x: walkingfigure.getAttribute('column'), y: walkingfigure.getAttribute('row')},
-											to: {x: this.getAttribute('column'), y: this.getAttribute('row')}});
-				move2(walkingfigure, this);
-				if (roquemode)
+				roquemode = false;
+				backstabmode = false;
+				jumping = false;
+				if (ismovecorrect(walkingfigure, this) && !isSimulatedMoveThreatening(walkingfigure, this))
 				{
-					if (touchedfigure.getAttribute('column').charCodeAt(0) > this.getAttribute('column').charCodeAt(0))
-					{ 
-						move2(finddiv('a', touchedfigure.getAttribute('row'))[0], finddiv('d', touchedfigure.getAttribute('row'))[0]);
-					}
-					else
+					addToLog( " - " + this.getAttribute('column') + this.getAttribute('row'));
+					isfiguretouched = !isfiguretouched;
+					if (roquemode)
 					{
-						move2(finddiv('h', touchedfigure.getAttribute('row'))[0], finddiv('f', touchedfigure.getAttribute('row'))[0]);
+						addToLogNewLine('ROQUE!');
+						if (touchedfigure.getAttribute('column').charCodeAt(0) > this.getAttribute('column').charCodeAt(0))
+						{ 
+							socket.emit('turn_castling', {from:{x: 'a', y: touchedfigure.getAttribute('row')[0]}});
+							move2(finddiv('a', touchedfigure.getAttribute('row'))[0], finddiv('d', touchedfigure.getAttribute('row'))[0]); 
+						}
+						else
+						{
+							socket.emit('turn_castling', {from:{x: 'h', y: touchedfigure.getAttribute('row')[0]}});
+							move2(finddiv('h', touchedfigure.getAttribute('row'))[0], finddiv('f', touchedfigure.getAttribute('row'))[0]);
+						}
 					}
+					else if (backstabmode)
+					{
+						var prey = finddiv(this.getAttribute('column'), walkingfigure.getAttribute('row'))[0];
+						prey.setAttribute('colorside', 'nothing');
+						prey.setAttribute('figuretype', 'nothing');
+						prey.setAttribute('additional', 'moved');
+						prey.getElementsByTagName("img")[0].remove();
+					}
+					else //ќбычный ход
+					{
+						socket.emit('turn_move', {from: {x: walkingfigure.getAttribute('column'), y: walkingfigure.getAttribute('row')},
+												to: {x: this.getAttribute('column'), y: this.getAttribute('row')}});					
+					}
+					move2(walkingfigure, this); 
+					//whichturn = opponent(whichturn);//  остыль! “ребуетс€ сделать так, чтобы событие о ходе направл€лось только тому, кто ожидает ход.
+					if (jumping)
+					{
+						this.setAttribute('additional', 'jumped');
+					}
+					
+					showpromotewindow('block');
+					var result=0;
+					if (check(whichturn)) result+=1;
+					if (checkmate(opponent(whichturn))) result+=10;
+					switch (result)
+					{
+						case 0:
+							// ”брать запрет королю делать рокировку, т. к. угрозы нет
+							var king = $(".cell[colorside=" + opponent(whichturn) + "][figuretype='King']" )[0];
+							if(king.getAttribute('additional') === 'checked') king.setAttribute('additional', 'not moving');
+							break;
+						case 1:
+							addToLogNewLine('CHECK!');
+							// «апретить королю делать рокировку, пока ему угрожают
+							var king = $(".cell[colorside=" + opponent(whichturn) + "][figuretype='King']" )[0];
+							if(king.getAttribute('additional') === 'not moving') king.setAttribute('additional', 'checked');
+							break;
+						case 10:
+							socket.emit("turn_draw");
+							addToLogNewLine('STALEMATE!');
+							break;
+						case 11:
+							socket.emit("turn_mate");
+							addToLogNewLine('CHECKMATE!');
+							break;
+					}
+					whichturn = opponent(whichturn);
+					//makeJumpersMoving(whichturn);
 				}
-				if (backstabmode)
+				else
 				{
-					var prey = finddiv(this.getAttribute('column'), walkingfigure.getAttribute('row'))[0];
-					prey.setAttribute('colorside', 'nothing');
-					prey.setAttribute('figuretype', 'nothing');
-					prey.setAttribute('additional', 'moved');
-					prey.getElementsByTagName("img")[0].remove();
+					addToLogNewLine("Incorrect move!");
+					isfiguretouched = !isfiguretouched;
 				}
-				if (jumping)
-				{
-					this.setAttribute('additional', 'jumped');
-				}
-				showpromotewindow('block');
-				var result=0;
-				if (check(whichturn)) result+=1;
-				if (checkmate(opponent(whichturn))) result+=10;
-				switch (result)
-				{
-					case 0:
-						// ”брать запрет королю делать рокировку, т. к. угрозы нет
-						var king = $(".cell[colorside=" + opponent(whichturn) + "][figuretype='King']" )[0];
-						if(king.getAttribute('additional') === 'checked') king.setAttribute('additional', 'not moving');
-						break;
-					case 1:
-						addToLogNewLine('CHECK!');
-						// «апретить королю делать рокировку, пока ему угрожают
-						var king = $(".cell[colorside=" + opponent(whichturn) + "][figuretype='King']" )[0];
-						if(king.getAttribute('additional') === 'not moving') king.setAttribute('additional', 'checked');
-						break;
-					case 10:
-						addToLogNewLine('STALEMATE!');
-						break;
-					case 11:
-						addToLogNewLine('CHECKMATE!');
-						break;
-				}
-				whichturn = opponent(whichturn);
-				//makeJumpersMoving(whichturn);
+				
 			}
-			else
-			{
-				addToLogNewLine("Incorrect move!");
-				isfiguretouched = !isfiguretouched;
-			}
-			
 		}
 	}
 });
+
 
 $(".transformer").click(function(){
 	document.getElementById('window').style.display = 'none';			
@@ -582,12 +731,19 @@ $(".transformer").click(function(){
 	var whitefigures = $(".cell[row=" + (yourturn==='white'? '8' : '1') +"][figuretype='Pawn']");
 	if (whitefigures.length)
 	{
+		socket.emit('turn_promotion', {from: {x: "", y: 0}, to: {x: whitefigures[0].getAttribute("column"), y: whitefigures[0].getAttribute("row")},
+										newPiece: this.getAttribute("figuretype")});
+		
+		whitefigures[0].setAttribute('colorside', 'white');					
 		whitefigures[0].setAttribute('figuretype', this.getAttribute("figuretype"));
 		whitefigures[0].getElementsByTagName('img')[0].src = "White" + this.getAttribute("figuretype") + ".png";
 	}
 	var blackfigures = $(".cell[row="+ (yourturn==='white'? '1' : '8') +"][figuretype='Pawn']");
 	if (blackfigures.length)
 	{
+		socket.emit('turn_promotion', {from: {x: "", y: 0}, to: {x: blackfigures[0].getAttribute("column"), y: blackfigures[0].getAttribute("row")},
+										newPiece: this.getAttribute("figuretype")});
+		blackfigures[0].setAttribute('colorside', 'black');							
 		blackfigures[0].setAttribute('figuretype', this.getAttribute("figuretype"));
 		blackfigures[0].getElementsByTagName('img')[0].src = "Black" + this.getAttribute("figuretype") + ".png";
 	}
