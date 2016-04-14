@@ -72,6 +72,24 @@
 					padding: 16px;
 				}
 				
+				#result
+				{
+					width: 500px;
+					height: 500px;
+					margin: 300px auto;
+					display: none;
+					background: #fff;
+					z-index: 200;
+					position: fixed;
+					left: 0;
+					right: 0;
+					top: 0;
+					bottom: 0;
+					padding: 16px;
+					font: 32pt/10pt sans-serif;
+					text-align: center;
+				}
+				
 				#roomlist
 				{
 					width:480px;
@@ -106,6 +124,15 @@
 				} 
 				.button:hover { background: rgb(232,95,76); } 
 				.button:active { background: rgb(152,15,0); } 
+				
+				.text
+				{
+					width:350px;
+					height:50px;
+					text-align: center;
+					font-size:30px;
+					overflow: auto;
+				}
 			</style>
 			<script type="text/javascript" src="jquery-1.12.1.min.js"></script>
 			<script src="http://localhost:9898/socket.io/socket.io.js"></script>
@@ -130,6 +157,10 @@
 					<div class="button">Enter</div>
 					<div class="button">Wait</div>
 					<div id="roomlist"></div>
+				</div>
+				<div id="result">
+					<div class="text"></div>
+					<div class="button">Exit</div>
 				</div>
 				<script type="text/javascript" src="ChessScript.js"></script>
 				<script type="text/javascript">

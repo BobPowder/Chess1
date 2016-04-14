@@ -81,7 +81,7 @@ function isanyonebetween(touchedfigure, destination)
 var roquemode = false;
 function readytoroque(king, destination)
 {
-	var rook = finddiv(king.getAttribute('column').charCodeAt(0) > destination.getAttribute('column').charCodeAt(0)? 'a' : 'h', king.getAttribute('row'));
+	var rook = finddiv(king.getAttribute('column').charCodeAt(0) > destination.getAttribute('column').charCodeAt(0)? 'A' : 'H', king.getAttribute('row'));
 	if (king.getAttribute("additional") === 'not moving' &&
 		rook.attr('figuretype') === 'Rook' &&
 		rook.attr('colorside') === king.getAttribute('colorside') &&
@@ -310,13 +310,13 @@ function checkmate(defencingcolor)
 
 function showpromotewindow(state)
 {
-	if ( $(".cell[row='8'][figuretype='Pawn']").length || $(".cell[row='1'][figuretype='Pawn']").length)
-	{
+	//if ( $(".cell[row='8'][figuretype='Pawn']").length || $(".cell[row='1'][figuretype='Pawn']").length)
+	//{
 		addToLogNewLine('TRANSFORM!');
 		document.getElementById('window').style.display = state;            
 		document.getElementById('wrap').style.display = state; 
 
-	}
+	//}
 }
 
 var socket;
@@ -341,21 +341,7 @@ socket.on('connect', function () {
 		$('#logs').innerHTML += strings[msg.event].replace(/\[([a-z]+)\]/g, '<span class="$1">').replace(/\[\/[a-z]+\]/g, '</span>').replace(/\%time\%/, msg.time).replace(/\%name\%/, msg.name).replace(/\%text\%/, unescape(msg.text).replace('<', '&lt;').replace('>', '&gt;')) + '<br>';
 		// Прокручиваем лог в конец
 		$('#logs').scrollTop = $('#logs').scrollHeight;
-	});
-	// При нажатии <Enter> или кнопки отправляем текст
-	/*document.querySelector('#input').onkeypress = function(e) {
-		if (e.which == '13') {
-			// Отправляем содержимое input'а, закодированное в escape-последовательность
-			socket.send(escape(document.querySelector('#input').value));
-			// Очищаем input
-			document.querySelector('#input').value = '';
-		}
-	};
-	document.querySelector('#send').onclick = function() {
-		socket.send(escape(document.querySelector('#input').value));
-		document.querySelector('#input').value = '';
-	};*/
-											
+	});									
 });
 	
 socket.on('game_found', function(data)
@@ -388,7 +374,21 @@ socket.on('player_move', function(data)
 				walkingfigure.getAttribute('column')+
 				walkingfigure.getAttribute('row'));
 		addToLog( " - " + destination.getAttribute('column') + destination.getAttribute('row'));
-		move2(walkingfigure, destination);
+		
+		var victim = finddiv(destination.getAttribute('column'), walkingfigure.getAttribute('row'))[0]; // фигура, которую возьмут на проходе
+		//console.log(victim);
+		if (walkingfigure.getAttribute('figuretype')==='Pawn' && rowdifference(walkingfigure, destination) == 2) { //Вдруг это был прыжок пешки
+			move2(walkingfigure, destination);
+			destination.setAttribute('additional', 'jumped');
+		}		
+		else if (victim.getAttribute('figuretype') === 'Pawn' && victim.getAttribute('colorside')==opponent(walkingfigure.getAttribute('colorside'))
+		&& victim.getAttribute('additional') === 'jumped'){  //Вдруг это взятие на проходе
+			victim.setAttribute('colorside', 'nothing');
+			victim.setAttribute('figuretype', 'nothing');
+			victim.getElementsByTagName("img")[0].remove();
+			move2(walkingfigure, destination);
+		}
+		else move2(walkingfigure, destination);
 		
 	}
 });	
@@ -397,7 +397,7 @@ socket.on('player_castling', function(data)
 {
 	addToLogNewLine('player_castling');
 	var rook = finddiv(data.from.x, data.from.y)[0];
-	var king = finddiv('e', data.from.y)[0];
+	var king = finddiv('E', data.from.y)[0];
 	if (king.getAttribute("additional") === 'not moving' &&
 		king.getAttribute("figuretype") === 'King' &&
 		rook.getAttribute('figuretype') === 'Rook' &&
@@ -406,8 +406,8 @@ socket.on('player_castling', function(data)
 		isanyonebetween(king, rook))
 		{
 			
-			move2(rook, finddiv( data.from.x === 'a'? 'd' : 'f', data.from.y)[0]);
-			move2(king, finddiv( data.from.x === 'a'? 'c' : 'g', data.from.y)[0]);
+			move2(rook, finddiv( data.from.x === 'A'? 'D' : 'F', data.from.y)[0]);
+			move2(king, finddiv( data.from.x === 'A'? 'C' : 'G', data.from.y)[0]);
 			whichturn = opponent(whichturn);
 		}
 		else 
@@ -420,46 +420,66 @@ socket.on('player_castling', function(data)
 
 socket.on('player_promotion', function(data)
 {
-	var pawn = finddiv(data.to.x, data.to.y)[0];
-	addToLogNewLine(pawn.getAttribute("colorside"));
+	addToLogNewLine("Oh, no! PRRROMOTION!");
+	var pawn = finddiv(data.from.x, data.from.y)[0];
+	var destination =  finddiv(data.to.x, data.to.y)[0];
+	/*addToLogNewLine(pawn.getAttribute("colorside"));
 	addToLogNewLine(pawn.getAttribute("figuretype"));
 	addToLogNewLine(pawn.getAttribute("row"));
 	addToLogNewLine(pawn.getAttribute("column"));
 	addToLogNewLine(pawn.getAttribute("row") === 8);
 	addToLogNewLine(pawn.getAttribute("figuretype") === "Pawn");
-	addToLogNewLine(pawn.getAttribute("colorside") === "white");
-	if((pawn.getAttribute("row") === '8' && pawn.getAttribute("colorside") === "white") ||
-	   (pawn.getAttribute("row") === '1' && pawn.getAttribute("colorside") === "black") && 
-		pawn.getAttribute("figuretype") === "Pawn")
-		{
-			switch(data.newPiece)
+	addToLogNewLine(pawn.getAttribute("colorside") === "white");*/
+	if (data.playercolor === yourturn || 
+	!ismovecorrect(pawn, destination) ||
+	isSimulatedMoveThreatening(pawn, destination))
+	{
+		socket.emit("turnValidation_invalid");
+		addToLogNewLine("Opponent made an illegal move");
+	}
+	else 
+	{
+		whichturn = opponent(whichturn);
+		addToLogNewLine( 
+				pawn.getAttribute('colorside') + ' ' +
+				pawn.getAttribute('figuretype')+ ' ' +
+				pawn.getAttribute('column')+
+				pawn.getAttribute('row'));
+		addToLog( " - " + destination.getAttribute('column') + destination.getAttribute('row'));
+		move2(pawn, destination);
+		if((destination.getAttribute("row") === '8' && destination.getAttribute("colorside") === "white") ||
+		   (destination.getAttribute("row") === '1' && destination.getAttribute("colorside") === "black") && 
+			destination.getAttribute("figuretype") === "Pawn")
 			{
-				case "knight":
-					pawn.setAttribute('figuretype', "Knight");
-					pawn.getElementsByTagName('img')[0].src = (pawn.getAttribute("colorside") === 'white'? "White" : "Black") + "Knight.png";
-				break;
-				case "rook":
-					pawn.setAttribute('figuretype', "Rook");
-					pawn.getElementsByTagName('img')[0].src = (pawn.getAttribute("colorside") === 'white'? "White" : "Black") + "Rook.png";
-				break;
-				case "bighop":
-					pawn.setAttribute('figuretype', "Bishop");
-					pawn.getElementsByTagName('img')[0].src = (pawn.getAttribute("colorside") === 'white'? "White" : "Black") + "Bishop.png";
-				break;
-				case "queen":
-					pawn.setAttribute('figuretype', "Queen");
-					pawn.getElementsByTagName('img')[0].src = (pawn.getAttribute("colorside") === 'white'? "White" : "Black") + "Queen.png";
-				break;
-				default:
-					addToLogNewLine("Unknown figure");
-				break;
+				switch(data.newPiece)
+				{
+					case "knight":
+						destination.setAttribute('figuretype', "Knight");
+						destination.getElementsByTagName('img')[0].src = (destination.getAttribute("colorside") === 'white'? "White" : "Black") + "Knight.png";
+					break;
+					case "rook":
+						destination.setAttribute('figuretype', "Rook");
+						destination.getElementsByTagName('img')[0].src = (destination.getAttribute("colorside") === 'white'? "White" : "Black") + "Rook.png";
+					break;
+					case "bighop":
+						destination.setAttribute('figuretype', "Bishop");
+						destination.getElementsByTagName('img')[0].src = (destination.getAttribute("colorside") === 'white'? "White" : "Black") + "Bishop.png";
+					break;
+					case "queen":
+						destination.setAttribute('figuretype', "Queen");
+						destination.getElementsByTagName('img')[0].src = (destination.getAttribute("colorside") === 'white'? "White" : "Black") + "Queen.png";
+					break;
+					default:
+						addToLogNewLine("Unknown figure");
+					break;
+				}
 			}
-		}
 		else
 		{
 			socket.emit("turnValidation_invalid");
 			addToLogNewLine("Opponent made an illegal promotion");
 		}
+	}
 });
 
 socket.on('player_mate', function(){
@@ -489,11 +509,15 @@ socket.on('player_draw', function(){
 });
 
 socket.on('game_end', function(data){
-	addToLogNewLine(data.msg);
-	addToLogNewLine(data.winnerColor === null? "Draw!" : data.winnerColor + " wins!");
-	$("#mainChessBoard").children().remove();
+	$(".text").html(data.msg + " " + (data.winnerColor === null? "Draw!" : data.winnerColor + " wins!"));
+	/*var button = document.createElement("div");
+	button.className='button';
+	button.innerHTML = 'Exit';
+	document.getElementById("result").appendChild(button);*/
 	
-	document.getElementById('menu').style.display = "block";            
+	$("#mainChessBoard").children().remove();
+	$("#logs").html("");
+	document.getElementById('result').style.display = "block";           
 	document.getElementById('wrap').style.display = "block"; 
 	$(".button:contains('Stop waiting')")[0].innerHTML = 'Wait';
 	
@@ -519,6 +543,10 @@ $( ".button" ).click(function(){
 		case 'Leave':
 			socket.emit('room_leave');
 			break;
+		case 'Exit':
+			document.getElementById('result').style.display = "none";
+			document.getElementById('menu').style.display = "block";            
+			break;
 	}
 });
 
@@ -532,69 +560,70 @@ touchedfigure.appendChild(document.createElement("img"));
 	
 function BeginGame(color){
 	yourturn = color;
+	whichturn = 'white';
 	if (color === 'white')
 	{
-		insertimage('#dedede', "BlackRook.png", "Rook", "black", "a", 8, 'not moving');
-		insertimage('#bababa', "BlackKnight.png", "Knight", "black", "b", 8, 'nothing');
-		insertimage('#dedede', "BlackBishop.png", "Bishop", "black", "c", 8, 'nothing');
-		insertimage('#bababa', "BlackQueen.png", "Queen", "black", "d", 8, 'nothing');
-		insertimage('#dedede', "BlackKing.png", "King", "black", "e", 8, 'not moving');
-		insertimage('#bababa', "BlackBishop.png", "Bishop", "black", "f", 8, 'nothing');
-		insertimage('#dedede', "BlackKnight.png", "Knight", "black", "g", 8, 'nothing');
-		insertimage('#bababa', "BlackRook.png", "Rook", "black", "h", 8, 'not moving');
+		insertimage('#dedede', "BlackRook.png", "Rook", "black", "A", 8, 'not moving');
+		insertimage('#bababa', "BlackKnight.png", "Knight", "black", "B", 8, 'nothing');
+		insertimage('#dedede', "BlackBishop.png", "Bishop", "black", "C", 8, 'nothing');
+		insertimage('#bababa', "BlackQueen.png", "Queen", "black", "D", 8, 'nothing');
+		insertimage('#dedede', "BlackKing.png", "King", "black", "E", 8, 'not moving');
+		insertimage('#bababa', "BlackBishop.png", "Bishop", "black", "F", 8, 'nothing');
+		insertimage('#dedede', "BlackKnight.png", "Knight", "black", "G", 8, 'nothing');
+		insertimage('#bababa', "BlackRook.png", "Rook", "black", "H", 8, 'not moving');
 
 		for (var i=8; i<16; i++)
 			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
-			"BlackPawn.png", "Pawn", "black", String.fromCharCode(89+i), 7, 'not moving');
+			"BlackPawn.png", "Pawn", "black", String.fromCharCode(57+i), 7, 'not moving');
 						
 		for (var i=16; i<48; i++)
 			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
-			null , "nothing", "nothing", String.fromCharCode(97+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');
+			null , "nothing", "nothing", String.fromCharCode(65+(i % 8)), 8 - (i - i % 8) / 8, 'nothing');
 
 		for (var i=48; i<56; i++)
 			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'),
-			"WhitePawn.png", "Pawn", "white", String.fromCharCode(49+i), 2, 'not moving');
+			"WhitePawn.png", "Pawn", "white", String.fromCharCode(17+i), 2, 'not moving');
 						
-		insertimage("#bababa", "WhiteRook.png", "Rook", "white", "a", 1, 'not moving');
-		insertimage('#dedede', "WhiteKnight.png", "Knight", "white", "b", 1, 'nothing');
-		insertimage("#bababa", "WhiteBishop.png", "Bishop", "white", "c", 1, 'nothing');
-		insertimage('#dedede', "WhiteQueen.png", "Queen", "white", "d", 1, 'nothing');
-		insertimage("#bababa", "WhiteKing.png", "King", "white", "e", 1, 'not moving');
-		insertimage('#dedede', "WhiteBishop.png", "Bishop", "white", "f", 1, 'nothing');
-		insertimage("#bababa", "WhiteKnight.png", "Knight", "white", "g", 1, 'nothing');
-		insertimage('#dedede', "WhiteRook.png", "Rook", "white", "h", 1, 'not moving');
+		insertimage("#bababa", "WhiteRook.png", "Rook", "white", "A", 1, 'not moving');
+		insertimage('#dedede', "WhiteKnight.png", "Knight", "white", "B", 1, 'nothing');
+		insertimage("#bababa", "WhiteBishop.png", "Bishop", "white", "C", 1, 'nothing');
+		insertimage('#dedede', "WhiteQueen.png", "Queen", "white", "D", 1, 'nothing');
+		insertimage("#bababa", "WhiteKing.png", "King", "white", "E", 1, 'not moving');
+		insertimage('#dedede', "WhiteBishop.png", "Bishop", "white", "F", 1, 'nothing');
+		insertimage("#bababa", "WhiteKnight.png", "Knight", "white", "G", 1, 'nothing');
+		insertimage('#dedede', "WhiteRook.png", "Rook", "white", "H", 1, 'not moving');
 	}
 	if (color === 'black')
 	{
-		insertimage('#dedede', "WhiteRook.png", "Rook", "white", "h", 1, 'not moving');
-		insertimage('#bababa', "WhiteKnight.png", "Knight", "white", "g", 1, 'nothing');
-		insertimage('#dedede', "WhiteBishop.png", "Bishop", "white", "f", 1, 'nothing');
-		insertimage('#bababa', "WhiteKing.png", "King", "white", "e", 1, 'not moving');
-		insertimage('#dedede', "WhiteQueen.png", "Queen", "white", "d", 1, 'nothing');
-		insertimage('#bababa', "WhiteBishop.png", "Bishop", "white", "c", 1, 'nothing');
-		insertimage('#dedede', "WhiteKnight.png", "Knight", "white", "b", 1, 'nothing');
-		insertimage('#bababa', "WhiteRook.png", "Rook", "white", "a", 1, 'not moving');
+		insertimage('#dedede', "WhiteRook.png", "Rook", "white", "H", 1, 'not moving');
+		insertimage('#bababa', "WhiteKnight.png", "Knight", "white", "G", 1, 'nothing');
+		insertimage('#dedede', "WhiteBishop.png", "Bishop", "white", "F", 1, 'nothing');
+		insertimage('#bababa', "WhiteKing.png", "King", "white", "E", 1, 'not moving');
+		insertimage('#dedede', "WhiteQueen.png", "Queen", "white", "D", 1, 'nothing');
+		insertimage('#bababa', "WhiteBishop.png", "Bishop", "white", "C", 1, 'nothing');
+		insertimage('#dedede', "WhiteKnight.png", "Knight", "white", "B", 1, 'nothing');
+		insertimage('#bababa', "WhiteRook.png", "Rook", "white", "A", 1, 'not moving');
 
 		for (var i=8; i<16; i++)
 			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
-			"WhitePawn.png", "Pawn", "white", String.fromCharCode(112-i), 2, 'not moving');
+			"WhitePawn.png", "Pawn", "white", String.fromCharCode(80-i), 2, 'not moving');
 						
 		for (var i=16; i<48; i++)
 			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'), 
-			null , "nothing", "nothing", String.fromCharCode(104-(i % 8)), 1 + (i - i % 8) / 8, 'nothing');
+			null , "nothing", "nothing", String.fromCharCode(72-(i % 8)), 1 + (i - i % 8) / 8, 'nothing');
 
 		for (var i=48; i<56; i++)
 			insertimage((parseInt((i / 8) + i) % 2 == 0 ? '#dedede' : '#bababa'),
-			"BlackPawn.png", "Pawn", "black", String.fromCharCode(152-i), 7, 'not moving');
+			"BlackPawn.png", "Pawn", "black", String.fromCharCode(120-i), 7, 'not moving');
 						
-		insertimage("#bababa", "BlackRook.png", "Rook", "black", "h", 8, 'not moving');
-		insertimage('#dedede', "BlackKnight.png", "Knight", "black", "g", 8, 'nothing');
-		insertimage("#bababa", "BlackBishop.png", "Bishop", "black", "f", 8, 'nothing');
-		insertimage('#dedede', "BlackKing.png", "King", "black", "e", 8, 'not moving');
-		insertimage("#bababa", "BlackQueen.png", "Queen", "black", "d", 8, 'nothing');
-		insertimage('#dedede', "BlackBishop.png", "Bishop", "black", "c", 8, 'nothing');
-		insertimage("#bababa", "BlackKnight.png", "Knight", "black", "b", 8, 'nothing');
-		insertimage('#dedede', "BlackRook.png", "Rook", "black", "a", 8, 'not moving');
+		insertimage("#bababa", "BlackRook.png", "Rook", "black", "H", 8, 'not moving');
+		insertimage('#dedede', "BlackKnight.png", "Knight", "black", "G", 8, 'nothing');
+		insertimage("#bababa", "BlackBishop.png", "Bishop", "black", "F", 8, 'nothing');
+		insertimage('#dedede', "BlackKing.png", "King", "black", "E", 8, 'not moving');
+		insertimage("#bababa", "BlackQueen.png", "Queen", "black", "D", 8, 'nothing');
+		insertimage('#dedede', "BlackBishop.png", "Bishop", "black", "C", 8, 'nothing');
+		insertimage("#bababa", "BlackKnight.png", "Knight", "black", "B", 8, 'nothing');
+		insertimage('#dedede', "BlackRook.png", "Rook", "black", "A", 8, 'not moving');
 	}
 
 /*for (var i=0; i<3; i++)
@@ -655,25 +684,32 @@ $( "#mainChessBoard" ).on('click', '.cell', function(){
 						addToLogNewLine('ROQUE!');
 						if (touchedfigure.getAttribute('column').charCodeAt(0) > this.getAttribute('column').charCodeAt(0))
 						{ 
-							socket.emit('turn_castling', {from:{x: 'a', y: touchedfigure.getAttribute('row')[0]}});
-							move2(finddiv('a', touchedfigure.getAttribute('row'))[0], finddiv('d', touchedfigure.getAttribute('row'))[0]); 
+							socket.emit('turn_castling', {from:{x: 'A', y: touchedfigure.getAttribute('row')[0]}});
+							move2(finddiv('A', touchedfigure.getAttribute('row'))[0], finddiv('D', touchedfigure.getAttribute('row'))[0]); 
 						}
 						else
 						{
-							socket.emit('turn_castling', {from:{x: 'h', y: touchedfigure.getAttribute('row')[0]}});
-							move2(finddiv('h', touchedfigure.getAttribute('row'))[0], finddiv('f', touchedfigure.getAttribute('row'))[0]);
+							socket.emit('turn_castling', {from:{x: 'H', y: touchedfigure.getAttribute('row')[0]}});
+							move2(finddiv('H', touchedfigure.getAttribute('row'))[0], finddiv('F', touchedfigure.getAttribute('row'))[0]);
 						}
 					}
 					else if (backstabmode)
 					{
+						socket.emit('turn_move', {from: {x: walkingfigure.getAttribute('column'), y: walkingfigure.getAttribute('row')},
+												to: {x: this.getAttribute('column'), y: this.getAttribute('row')}});		
 						var prey = finddiv(this.getAttribute('column'), walkingfigure.getAttribute('row'))[0];
 						prey.setAttribute('colorside', 'nothing');
 						prey.setAttribute('figuretype', 'nothing');
 						prey.setAttribute('additional', 'moved');
 						prey.getElementsByTagName("img")[0].remove();
 					}
-					else //Обычный ход
+					else if (walkingfigure.getAttribute('figuretype')==='Pawn' && 
+							this.getAttribute('row') === (yourturn==='white'? '8' : '1')) // превращение пешки
 					{
+						addToLogNewLine("PRRRRROMOTION!");
+						showpromotewindow('block');
+					}
+					else{  //Обычный ход (без превращения)
 						socket.emit('turn_move', {from: {x: walkingfigure.getAttribute('column'), y: walkingfigure.getAttribute('row')},
 												to: {x: this.getAttribute('column'), y: this.getAttribute('row')}});					
 					}
@@ -684,7 +720,7 @@ $( "#mainChessBoard" ).on('click', '.cell', function(){
 						this.setAttribute('additional', 'jumped');
 					}
 					
-					showpromotewindow('block');
+					
 					var result=0;
 					if (check(whichturn)) result+=1;
 					if (checkmate(opponent(whichturn))) result+=10;
@@ -711,7 +747,7 @@ $( "#mainChessBoard" ).on('click', '.cell', function(){
 							break;
 					}
 					whichturn = opponent(whichturn);
-					//makeJumpersMoving(whichturn);
+					makeJumpersMoving(whichturn);
 				}
 				else
 				{
@@ -728,20 +764,22 @@ $( "#mainChessBoard" ).on('click', '.cell', function(){
 $(".transformer").click(function(){
 	document.getElementById('window').style.display = 'none';			
 	document.getElementById('wrap').style.display = 'none';
-	var whitefigures = $(".cell[row=" + (yourturn==='white'? '8' : '1') +"][figuretype='Pawn']");
+	var whitefigures = $(".cell[row=" +'8' +"][figuretype='Pawn']");
 	if (whitefigures.length)
 	{
-		socket.emit('turn_promotion', {from: {x: "", y: 0}, to: {x: whitefigures[0].getAttribute("column"), y: whitefigures[0].getAttribute("row")},
+		socket.emit('turn_promotion', {from: {x: touchedfigure.getAttribute("column"), y: touchedfigure.getAttribute("row")}, 
+										to: {x: whitefigures[0].getAttribute("column"), y: whitefigures[0].getAttribute("row")},
 										newPiece: this.getAttribute("figuretype")});
 		
 		whitefigures[0].setAttribute('colorside', 'white');					
 		whitefigures[0].setAttribute('figuretype', this.getAttribute("figuretype"));
 		whitefigures[0].getElementsByTagName('img')[0].src = "White" + this.getAttribute("figuretype") + ".png";
 	}
-	var blackfigures = $(".cell[row="+ (yourturn==='white'? '1' : '8') +"][figuretype='Pawn']");
+	var blackfigures = $(".cell[row="+ '1' +"][figuretype='Pawn']");
 	if (blackfigures.length)
 	{
-		socket.emit('turn_promotion', {from: {x: "", y: 0}, to: {x: blackfigures[0].getAttribute("column"), y: blackfigures[0].getAttribute("row")},
+		socket.emit('turn_promotion', {from: {x: touchedfigure.getAttribute("column"), y: touchedfigure.getAttribute("row")}, 
+										to: {x: blackfigures[0].getAttribute("column"), y: blackfigures[0].getAttribute("row")},
 										newPiece: this.getAttribute("figuretype")});
 		blackfigures[0].setAttribute('colorside', 'black');							
 		blackfigures[0].setAttribute('figuretype', this.getAttribute("figuretype"));
