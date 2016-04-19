@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+    <html>
+		<head>
+			<style>
+				#mainChessBoard
+				{
+					width:800px;
+					height:800px;
+					border:1px solid black;
+				}
+				
+				#logs
+				{
+					width:800px;
+					height:400px;
+					border:1px solid black;
+					font-size:30px;
+					overflow: auto;
+				}
+
+				.cell
+				{
+					width:100px;
+					height:100px;
+					float:left;
+				}
+				
+				#wrap
+				{
+					display: none;
+					opacity: 0.8;
+					position: fixed;
+					left: 0;
+					right: 0;
+					top: 0;
+					bottom: 0;
+					padding: 16px;
+					background-color: rgba(1, 1, 1, 0.725);
+					z-index: 100;
+					overflow: auto;
+				}
+				
+				#window
+				{
+					width: 100px;
+					height: 400px;
+					margin: 50px auto;
+					display: none;
+					background: #fff;
+					z-index: 200;
+					position: fixed;
+					left: 0;
+					right: 0;
+					top: 0;
+					bottom: 0;
+					padding: 16px;
+				}
+				
+				.transformer
+				{
+					cursor: pointer;
+				}
+			</style>
+			<script type="text/javascript" src="jquery-1.12.1.min.js"></script>
+			<script src="http://localhost:3056/socket.io/socket.io.js"></script>
+		</head>
+			<body>
+				<div id="mainChessBoard"></div>
+				<div id="logs"></div>
+				<div onclick="show('none')" id="wrap"></div>
+				<div id="window">
+					<div class="transformer" figuretype="Rook">		
+						<img src="BlackRook.png">
+					<div class="transformer" figuretype="Bishop">		
+						<img src="BlackBishop.png">
+					<div class="transformer" figuretype="Knight">		
+						<img src="BlackKnight.png">
+					<div class="transformer" figuretype="Queen">		
+						<img src="BlackQueen.png">
+				</div>
+				
+				<script type="text/javascript">
+					function addToLogNewLine(str)
+					{
+						$("#logs").html($('#logs').html() + "<br>" + str);
+					}
+					// Создаем текст сообщений для событий
+					strings = {
+						'connected': '[sys][time]%time%[/time]: Вы успешно соединились к сервером как [user]%name%[/user].[/sys]',
+						'userJoined': '[sys][time]%time%[/time]: Пользователь [user]%name%[/user] присоединился к чату.[/sys]',
+						'messageSent': '[out][time]%time%[/time]: [user]%name%[/user]: %text%[/out]',
+						'messageReceived': '[in][time]%time%[/time]: [user]%name%[/user]: %text%[/in]',
+						'userSplit': '[sys][time]%time%[/time]: Пользователь [user]%name%[/user] покинул чат.[/sys]'
+					};
+					window.onload = function() {
+						// Создаем соединение с сервером; websockets почему-то в Хроме не работают, используем xhr
+						if (navigator.userAgent.toLowerCase().indexOf('chrome') != -1) {
+							socket = io.connect('http://localhost:3056', {'transports': ['xhr-polling']});
+						} else {
+							socket = io.connect('http://localhost:3056');
+						}
+						socket.on('connect', function () {
+							socket.on('message', function (msg) {
+								// Добавляем в лог сообщение, заменив время, имя и текст на полученные
+								$('#logs').innerHTML += strings[msg.event].replace(/\[([a-z]+)\]/g, '<span class="$1">').replace(/\[\/[a-z]+\]/g, '</span>').replace(/\%time\%/, msg.time).replace(/\%name\%/, msg.name).replace(/\%text\%/, unescape(msg.text).replace('<', '&lt;').replace('>', '&gt;')) + '<br>';
+								// Прокручиваем лог в конец
+								$('#logs').scrollTop = $('#logs').scrollHeight;
+							});
+							// При нажатии <Enter> или кнопки отправляем текст
+							/*document.querySelector('#input').onkeypress = function(e) {
+								if (e.which == '13') {
+									// Отправляем содержимое input'а, закодированное в escape-последовательность
+									socket.send(escape(document.querySelector('#input').value));
+									// Очищаем input
+									document.querySelector('#input').value = '';
+								}
+							};
+							document.querySelector('#send').onclick = function() {
+								socket.send(escape(document.querySelector('#input').value));
+								document.querySelector('#input').value = '';
+							};*/
+																	
+						});
+						socket.on('roomsList_get_return', function(data){
+								addToLogNewLine('lalal');
+								addToLogNewLine(data);
+							});	
+							
+						socket.on('player_move', function(move){
+								addToLogNewLine('player_move');
+								addToLogNewLine(move.playerColor);
+								addToLogNewLine(move.from.x);
+								addToLogNewLine(move.from.y);
+								addToLogNewLine(move.to.x);
+								addToLogNewLine(move.to.y);
+							});	
+						
+						$('#logs').click(function(){
+							addToLogNewLine('emit');
+							socket.emit('roomsList_get');
+						})
+						
+						$('#mainChessBoard').click(function(){
+							addToLogNewLine('emit_turn_move');
+							socket.emit('turn_move', { from: {x: 'e', y: 2 }, to: { x: 'e', y: 4}});				
+						})
+						
+					};	
+				</script>
+		</body>
+    </html>

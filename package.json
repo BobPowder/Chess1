@@ -1,0 +1,12 @@
+{
+  "name": "Chess",
+  "description": "Chess",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "express": "3.x",
+    "socket.io": "0.9"
+  },
+  "main": "HtmlBoard.html",
+  "devDependencies": {}
+}
