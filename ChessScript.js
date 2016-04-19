@@ -330,11 +330,11 @@ strings = {
 };
 //window.onload = function() {
 // —оздаем соединение с сервером; websockets почему-то в ’роме не работают, используем xhr
-if (navigator.userAgent.toLowerCase().indexOf('chrome') != -1) {
-	socket = io.connect('http://localhost:9898', {'transports': ['xhr-polling']});
-} else {
-	socket = io.connect('http://localhost:9898');
-}
+/*if (navigator.userAgent.toLowerCase().indexOf('chrome') != -1) {
+	socket = io.connect('http://185.81.113.164:8080', {'transports': ['xhr-polling']});
+} else {*/
+socket = io.connect("http://10.254.18.103:3056");
+//}
 socket.on('connect', function () {
 	socket.on('message', function (msg) {
 		// ƒобавл€ем в лог сообщение, заменив врем€, им€ и текст на полученные
@@ -769,7 +769,7 @@ $(".transformer").click(function(){
 	{
 		socket.emit('turn_promotion', {from: {x: touchedfigure.getAttribute("column"), y: touchedfigure.getAttribute("row")}, 
 										to: {x: whitefigures[0].getAttribute("column"), y: whitefigures[0].getAttribute("row")},
-										newPiece: this.getAttribute("figuretype")});
+										newPiece: this.getAttribute("figuretype").toLowerCase()});
 		
 		whitefigures[0].setAttribute('colorside', 'white');					
 		whitefigures[0].setAttribute('figuretype', this.getAttribute("figuretype"));
@@ -780,7 +780,7 @@ $(".transformer").click(function(){
 	{
 		socket.emit('turn_promotion', {from: {x: touchedfigure.getAttribute("column"), y: touchedfigure.getAttribute("row")}, 
 										to: {x: blackfigures[0].getAttribute("column"), y: blackfigures[0].getAttribute("row")},
-										newPiece: this.getAttribute("figuretype")});
+										newPiece: this.getAttribute("figuretype").toLowerCase()});
 		blackfigures[0].setAttribute('colorside', 'black');							
 		blackfigures[0].setAttribute('figuretype', this.getAttribute("figuretype"));
 		blackfigures[0].getElementsByTagName('img')[0].src = "Black" + this.getAttribute("figuretype") + ".png";
